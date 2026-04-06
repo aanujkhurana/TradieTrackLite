@@ -1,11 +1,19 @@
+# TradieTrack Lite - Build Specification
 
-# TradieTrack Lite V2
+## Overview
+TradieTrack Lite is a simple mobile app for tradies (plumbers, handymen, cleaners) to track jobs, capture photos, set reminders, and export job reports as PDFs.
 
-Features added:
-- Job details (notes, address, status)
-- Photo upload (Expo Image Picker)
-- PDF export (Puppeteer backend)
-- Reminders (basic datetime field)
+The goal is to build a minimal, fast, and practical tool that replaces WhatsApp, notes, and scattered photos.
+
+## Core Principles
+- Keep it extremely simple
+- Mobile-first UX
+- Fast input (under 10 seconds per job)
+- Offline-friendly
+- No authentication (initial version)
+- Focus on real-world usage on job sites
+
+---
 
 ## Setup
 
@@ -21,25 +29,6 @@ npm install
 npx expo start
 
 Update API_URL in frontend/src/config.js
-
-# TradieTrack Lite - Build Specification (LLM Ready)
-
-## Overview
-TradieTrack Lite is a simple mobile app for tradies (plumbers, handymen, cleaners) to track jobs, capture photos, set reminders, and export job reports as PDFs.
-
-The goal is to build a minimal, fast, and practical tool that replaces WhatsApp, notes, and scattered photos.
-
----
-
-## Core Principles
-- Keep it extremely simple
-- Mobile-first UX
-- Fast input (under 10 seconds per job)
-- Offline-friendly
-- No authentication (initial version)
-- Focus on real-world usage on job sites
-
----
 
 ## Tech Stack
 
