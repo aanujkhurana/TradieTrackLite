@@ -7,7 +7,7 @@ This backlog turns TradieTrack Lite from an MVP into a production-ready and genu
 - [x] Add `.nvmrc` with a stable Node LTS version.
 - [x] Update setup docs with exact supported Node and npm versions.
 - [x] Make the backend read `PORT` from `process.env.PORT`.
-- [ ] Add a startup check that fails clearly when `MONGO_URI` is missing.
+- [x] Add a startup check that fails clearly when `MONGO_URI` is missing.
 - [ ] Add `GET /api/health` for deployment and uptime checks.
 - [ ] Add global Express error-handling middleware.
 - [ ] Return consistent API error responses, for example `{ "error": { "code": "...", "message": "..." } }`.
