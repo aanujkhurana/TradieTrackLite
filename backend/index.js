@@ -15,6 +15,18 @@ const asyncHandler = (handler) => (req, res, next) => {
 const sendError = (res, status, code, message) => {
   return res.status(status).json({ error: { code, message } });
 };
+const requestLogger = (req, res, next) => {
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    const durationMs = Date.now() - startedAt;
+    console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${durationMs}ms`);
+  });
+  next();
+};
+
+if (process.env.NODE_ENV !== 'test') {
+  app.use(requestLogger);
+}
 
 if (process.env.NODE_ENV !== 'test') {
   if (!process.env.MONGO_URI) {
