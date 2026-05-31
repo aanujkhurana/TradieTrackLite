@@ -9,6 +9,9 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 4000;
+const asyncHandler = (handler) => (req, res, next) => {
+  Promise.resolve(handler(req, res, next)).catch(next);
+};
 
 if (process.env.NODE_ENV !== 'test') {
   if (!process.env.MONGO_URI) {
@@ -83,11 +86,11 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/jobs', async (req, res) => {
+app.get('/api/jobs', asyncHandler(async (req, res) => {
   res.json(await Job.find());
-});
+}));
 
-app.post('/api/jobs', validateJob, async (req, res) => {
+app.post('/api/jobs', validateJob, asyncHandler(async (req, res) => {
   const payload = { ...req.body };
 
   if (payload.status === 'completed' && !payload.endDate) {
@@ -97,9 +100,9 @@ app.post('/api/jobs', validateJob, async (req, res) => {
   const job = new Job(payload);
   await job.save();
   res.status(201).json(job);
-});
+}));
 
-app.put('/api/jobs/:id', validateJob, async (req, res) => {
+app.put('/api/jobs/:id', validateJob, asyncHandler(async (req, res) => {
   const existing = await Job.findById(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Job not found' });
 
@@ -126,20 +129,20 @@ app.put('/api/jobs/:id', validateJob, async (req, res) => {
 
   const job = await Job.findByIdAndUpdate(req.params.id, update, { new: true });
   res.json(job);
-});
+}));
 
-app.delete('/api/jobs/:id', async (req, res) => {
+app.delete('/api/jobs/:id', asyncHandler(async (req, res) => {
   const existing = await Job.findById(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Job not found' });
 
   await Job.findByIdAndDelete(req.params.id);
   res.json({ ok: true });
-});
+}));
 
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 
-app.post('/api/jobs/:id/pdf', async (req, res) => {
+app.post('/api/jobs/:id/pdf', asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.id);
   if (!job) return res.status(404).json({ error: 'Job not found' });
 
@@ -227,6 +230,12 @@ app.post('/api/jobs/:id/pdf', async (req, res) => {
     // Clean up temp file after response is sent
     fs.unlink(pdfPath, () => {});
   }
+}));
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  if (res.headersSent) return next(err);
+  return res.status(500).json({ error: 'Internal server error' });
 });
 
 if (process.env.NODE_ENV !== 'test') {

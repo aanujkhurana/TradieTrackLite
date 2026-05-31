@@ -9,7 +9,7 @@ This backlog turns TradieTrack Lite from an MVP into a production-ready and genu
 - [x] Make the backend read `PORT` from `process.env.PORT`.
 - [x] Add a startup check that fails clearly when `MONGO_URI` is missing.
 - [x] Add `GET /api/health` for deployment and uptime checks.
-- [ ] Add global Express error-handling middleware.
+- [x] Add global Express error-handling middleware.
 - [ ] Return consistent API error responses, for example `{ "error": { "code": "...", "message": "..." } }`.
 - [ ] Validate Mongo ObjectIds before `findById`, `findByIdAndUpdate`, and `findByIdAndDelete`.
 - [ ] Add request logging for method, path, status, and latency.
