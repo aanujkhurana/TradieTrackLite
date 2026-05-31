@@ -61,10 +61,21 @@ The project is split into:
 
 ## Requirements
 
-- Node.js. Use an LTS release where possible. Node `v26` caused local dependency issues while verifying this repo.
-- npm
+- Node.js `v24.16.0` LTS
+- npm `11.13.0`
 - MongoDB running locally or a reachable MongoDB connection string
 - Expo Go, an iOS simulator, or an Android emulator for the mobile app
+
+Use the version pinned in `.nvmrc`:
+
+```sh
+nvm install
+nvm use
+node -v
+npm -v
+```
+
+Node `v26` caused local dependency issues while verifying this repo, so use the pinned LTS version for development.
 
 ## Setup
 
