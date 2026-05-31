@@ -79,6 +79,10 @@ function validateJob(req, res, next) {
   next();
 }
 
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true });
+});
+
 app.get('/api/jobs', async (req, res) => {
   res.json(await Job.find());
 });

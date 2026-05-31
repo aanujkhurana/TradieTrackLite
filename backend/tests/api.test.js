@@ -278,6 +278,12 @@ describe('Property 9: Job creation defaults', () => {
 // ---------------------------------------------------------------------------
 
 describe('Unit tests: CRUD routes', () => {
+  test('GET /api/health returns ok', async () => {
+    const res = await request(app).get('/api/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+  });
+
   test('valid POST returns 201 with job document', async () => {
     const res = await request(app)
       .post('/api/jobs')
