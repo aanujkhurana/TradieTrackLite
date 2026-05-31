@@ -299,7 +299,7 @@ describe('Unit tests: CRUD routes', () => {
       .post('/api/jobs')
       .send({ address: '42 Plumber St' });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/name and address/i);
+    expect(res.body.error.message).toMatch(/name and address/i);
   });
 
   test('POST missing address returns 400', async () => {
@@ -307,7 +307,7 @@ describe('Unit tests: CRUD routes', () => {
       .post('/api/jobs')
       .send({ name: 'Fix Tap' });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/name and address/i);
+    expect(res.body.error.message).toMatch(/name and address/i);
   });
 
   test('PUT with invalid status returns 400', async () => {
@@ -339,14 +339,14 @@ describe('Unit tests: CRUD routes', () => {
       .put(`/api/jobs/${fakeId}`)
       .send({ notes: 'update' });
     expect(res.status).toBe(404);
-    expect(res.body.error).toMatch(/not found/i);
+    expect(res.body.error.message).toMatch(/not found/i);
   });
 
   test('DELETE unknown id returns 404', async () => {
     const fakeId = new mongoose.Types.ObjectId().toString();
     const res = await request(app).delete(`/api/jobs/${fakeId}`);
     expect(res.status).toBe(404);
-    expect(res.body.error).toMatch(/not found/i);
+    expect(res.body.error.message).toMatch(/not found/i);
   });
   test('PUT rejects endDate before startDate', async () => {
     const job = await Job.create({ name: 'Fix Tap', address: '42 Plumber St' });
@@ -356,7 +356,7 @@ describe('Unit tests: CRUD routes', () => {
       .put(`/api/jobs/${job._id}`)
       .send({ startDate, endDate });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/endDate/i);
+    expect(res.body.error.message).toMatch(/endDate/i);
   });
 
   test('PUT completed status auto-sets endDate when missing', async () => {

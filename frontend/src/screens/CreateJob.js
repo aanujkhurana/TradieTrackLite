@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { API_URL } from '../config';
+import { getApiErrorMessage } from '../utils/apiError';
 
 export default function CreateJob({ navigation }) {
   const [name, setName] = useState('');
@@ -39,7 +40,7 @@ export default function CreateJob({ navigation }) {
       navigation.goBack();
     } catch (err) {
       if (err.response?.status === 400) {
-        Alert.alert('Validation Error', err.response.data.error || 'Invalid input');
+        Alert.alert('Validation Error', getApiErrorMessage(err, 'Invalid input'));
       } else {
         Alert.alert('No connection', 'No connection — changes not saved');
       }

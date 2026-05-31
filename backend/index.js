@@ -12,6 +12,9 @@ const PORT = process.env.PORT || 4000;
 const asyncHandler = (handler) => (req, res, next) => {
   Promise.resolve(handler(req, res, next)).catch(next);
 };
+const sendError = (res, status, code, message) => {
+  return res.status(status).json({ error: { code, message } });
+};
 
 if (process.env.NODE_ENV !== 'test') {
   if (!process.env.MONGO_URI) {
@@ -40,13 +43,13 @@ function validateJob(req, res, next) {
   // Require name and address on POST; reject empty strings on PUT if provided
   if (isPost) {
     if (!name || !name.trim() || !address || !address.trim()) {
-      return res.status(400).json({ error: 'name and address are required' });
+      return sendError(res, 400, 'VALIDATION_ERROR', 'name and address are required');
     }
   } else if (isPut) {
     const hasName = 'name' in req.body;
     const hasAddress = 'address' in req.body;
     if ((hasName && (!name || !name.trim())) || (hasAddress && (!address || !address.trim()))) {
-      return res.status(400).json({ error: 'name and address are required' });
+      return sendError(res, 400, 'VALIDATION_ERROR', 'name and address are required');
     }
   }
 
@@ -54,7 +57,7 @@ function validateJob(req, res, next) {
   if ((isPost || isPut) && status !== undefined) {
     const validStatuses = ['pending', 'in_progress', 'completed'];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'status must be pending, in_progress, or completed' });
+      return sendError(res, 400, 'VALIDATION_ERROR', 'status must be pending, in_progress, or completed');
     }
   }
   // Validate date fields are valid ISO date strings when provided
@@ -67,7 +70,7 @@ function validateJob(req, res, next) {
     if (value !== undefined && value !== null) {
       const parsed = parseDateValue(value);
       if (!parsed) {
-        return res.status(400).json({ error: `${field} must be a valid ISO date` });
+        return sendError(res, 400, 'VALIDATION_ERROR', `${field} must be a valid ISO date`);
       }
     }
   }
@@ -76,7 +79,7 @@ function validateJob(req, res, next) {
     const parsedStart = parseDateValue(startDate);
     const parsedEnd = parseDateValue(endDate);
     if (parsedStart && parsedEnd && parsedEnd.getTime() < parsedStart.getTime()) {
-      return res.status(400).json({ error: 'endDate cannot be before startDate' });
+      return sendError(res, 400, 'VALIDATION_ERROR', 'endDate cannot be before startDate');
     }
   }
   next();
@@ -104,7 +107,7 @@ app.post('/api/jobs', validateJob, asyncHandler(async (req, res) => {
 
 app.put('/api/jobs/:id', validateJob, asyncHandler(async (req, res) => {
   const existing = await Job.findById(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Job not found' });
+  if (!existing) return sendError(res, 404, 'JOB_NOT_FOUND', 'Job not found');
 
   // Strip createdAt from update payload to prevent mutation
   const update = { ...req.body };
@@ -123,7 +126,7 @@ app.put('/api/jobs/:id', validateJob, asyncHandler(async (req, res) => {
     const parsedStart = parseDateValue(effectiveStartDate);
     const parsedEnd = parseDateValue(effectiveEndDate);
     if (parsedStart && parsedEnd && parsedEnd.getTime() < parsedStart.getTime()) {
-      return res.status(400).json({ error: 'endDate cannot be before startDate' });
+      return sendError(res, 400, 'VALIDATION_ERROR', 'endDate cannot be before startDate');
     }
   }
 
@@ -133,7 +136,7 @@ app.put('/api/jobs/:id', validateJob, asyncHandler(async (req, res) => {
 
 app.delete('/api/jobs/:id', asyncHandler(async (req, res) => {
   const existing = await Job.findById(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Job not found' });
+  if (!existing) return sendError(res, 404, 'JOB_NOT_FOUND', 'Job not found');
 
   await Job.findByIdAndDelete(req.params.id);
   res.json({ ok: true });
@@ -144,7 +147,7 @@ const fs = require('fs');
 
 app.post('/api/jobs/:id/pdf', asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.id);
-  if (!job) return res.status(404).json({ error: 'Job not found' });
+  if (!job) return sendError(res, 404, 'JOB_NOT_FOUND', 'Job not found');
 
   const pdfPath = `/tmp/${Date.now()}.pdf`;
 
@@ -225,7 +228,7 @@ app.post('/api/jobs/:id/pdf', asyncHandler(async (req, res) => {
 
     res.json({ url: pdfPath });
   } catch (err) {
-    return res.status(500).json({ error: 'PDF generation failed' });
+    return sendError(res, 500, 'PDF_GENERATION_FAILED', 'PDF generation failed');
   } finally {
     // Clean up temp file after response is sent
     fs.unlink(pdfPath, () => {});
@@ -235,7 +238,7 @@ app.post('/api/jobs/:id/pdf', asyncHandler(async (req, res) => {
 app.use((err, req, res, next) => {
   console.error(err);
   if (res.headersSent) return next(err);
-  return res.status(500).json({ error: 'Internal server error' });
+  return sendError(res, 500, 'INTERNAL_SERVER_ERROR', 'Internal server error');
 });
 
 if (process.env.NODE_ENV !== 'test') {

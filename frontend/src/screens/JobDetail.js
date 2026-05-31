@@ -18,6 +18,7 @@ import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import { API_URL } from '../config';
+import { getApiErrorMessage } from '../utils/apiError';
 import { formatLoggedDuration } from '../utils/time';
 
 const STATUS_OPTIONS = [
@@ -63,7 +64,7 @@ export default function JobDetail({ route, navigation }) {
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } else if (err.response.status === 400) {
-      Alert.alert('Validation Error', err.response.data?.error || 'Invalid input');
+      Alert.alert('Validation Error', getApiErrorMessage(err, 'Invalid input'));
     } else {
       Alert.alert('Error', 'Something went wrong. Please try again.');
     }
