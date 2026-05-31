@@ -8,6 +8,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const PORT = process.env.PORT || 4000;
+
 if (process.env.NODE_ENV !== 'test') {
   mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB connected'))
@@ -219,7 +221,7 @@ app.post('/api/jobs/:id/pdf', async (req, res) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(4000, () => console.log('Server running on port 4000'));
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
 module.exports = app;
