@@ -4,7 +4,7 @@ This backlog turns TradieTrack Lite from an MVP into a production-ready and genu
 
 ## Phase 1: Foundation
 
-- [ ] Add `.nvmrc` with a stable Node LTS version.
+- [x] Add `.nvmrc` with a stable Node LTS version.
 - [ ] Update setup docs with exact supported Node and npm versions.
 - [ ] Make the backend read `PORT` from `process.env.PORT`.
 - [ ] Add a startup check that fails clearly when `MONGO_URI` is missing.
