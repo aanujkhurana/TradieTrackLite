@@ -11,7 +11,7 @@ This backlog turns TradieTrack Lite from an MVP into a production-ready and genu
 - [x] Add `GET /api/health` for deployment and uptime checks.
 - [x] Add global Express error-handling middleware.
 - [x] Return consistent API error responses, for example `{ "error": { "code": "...", "message": "..." } }`.
-- [ ] Validate Mongo ObjectIds before `findById`, `findByIdAndUpdate`, and `findByIdAndDelete`.
+- [x] Validate Mongo ObjectIds before `findById`, `findByIdAndUpdate`, and `findByIdAndDelete`.
 - [ ] Add request logging for method, path, status, and latency.
 
 ## Phase 2: Security And Accounts

@@ -34,6 +34,14 @@ function parseDateValue(value) {
   return date;
 }
 
+function validateJobId(req, res, next) {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return sendError(res, 400, 'INVALID_JOB_ID', 'Job id must be a valid ObjectId');
+  }
+
+  return next();
+}
+
 // Validator middleware for POST /api/jobs and PUT /api/jobs/:id
 function validateJob(req, res, next) {
   const { name, address, status, reminder, startDate, endDate } = req.body;
@@ -105,7 +113,7 @@ app.post('/api/jobs', validateJob, asyncHandler(async (req, res) => {
   res.status(201).json(job);
 }));
 
-app.put('/api/jobs/:id', validateJob, asyncHandler(async (req, res) => {
+app.put('/api/jobs/:id', validateJobId, validateJob, asyncHandler(async (req, res) => {
   const existing = await Job.findById(req.params.id);
   if (!existing) return sendError(res, 404, 'JOB_NOT_FOUND', 'Job not found');
 
@@ -134,7 +142,7 @@ app.put('/api/jobs/:id', validateJob, asyncHandler(async (req, res) => {
   res.json(job);
 }));
 
-app.delete('/api/jobs/:id', asyncHandler(async (req, res) => {
+app.delete('/api/jobs/:id', validateJobId, asyncHandler(async (req, res) => {
   const existing = await Job.findById(req.params.id);
   if (!existing) return sendError(res, 404, 'JOB_NOT_FOUND', 'Job not found');
 
@@ -145,7 +153,7 @@ app.delete('/api/jobs/:id', asyncHandler(async (req, res) => {
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 
-app.post('/api/jobs/:id/pdf', asyncHandler(async (req, res) => {
+app.post('/api/jobs/:id/pdf', validateJobId, asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.id);
   if (!job) return sendError(res, 404, 'JOB_NOT_FOUND', 'Job not found');
 

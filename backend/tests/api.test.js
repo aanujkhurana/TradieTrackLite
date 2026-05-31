@@ -220,6 +220,25 @@ describe('Property 4: Non-existent job returns 404', () => {
   });
 });
 
+describe('ObjectId validation', () => {
+  test('PUT, DELETE, and POST /pdf for malformed ids all return 400', async () => {
+    const badId = 'not-an-object-id';
+
+    const [putRes, delRes, pdfRes] = await Promise.all([
+      request(app).put(`/api/jobs/${badId}`).send({ notes: 'x' }),
+      request(app).delete(`/api/jobs/${badId}`),
+      request(app).post(`/api/jobs/${badId}/pdf`),
+    ]);
+
+    expect(putRes.status).toBe(400);
+    expect(delRes.status).toBe(400);
+    expect(pdfRes.status).toBe(400);
+    expect(putRes.body.error.code).toBe('INVALID_JOB_ID');
+    expect(delRes.body.error.code).toBe('INVALID_JOB_ID');
+    expect(pdfRes.body.error.code).toBe('INVALID_JOB_ID');
+  });
+});
+
 // ---------------------------------------------------------------------------
 // 3.5 Property 5: Delete removes job from list
 // Validates: Requirements 4.2
