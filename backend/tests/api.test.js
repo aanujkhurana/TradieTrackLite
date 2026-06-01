@@ -596,6 +596,27 @@ describe('Unit tests: CRUD routes', () => {
     expect(res.body.endDate).toBeDefined();
   });
 
+  test('PUT completed status preserves existing endDate', async () => {
+    const auth = await createAuthContext();
+    const originalEndDate = new Date('2026-01-03T10:00:00.000Z');
+    const job = await Job.create({
+      userId: auth.user._id,
+      name: 'Fix Tap',
+      address: '42 Plumber St',
+      status: 'completed',
+      startDate: new Date('2026-01-03T09:00:00.000Z'),
+      endDate: originalEndDate,
+    });
+
+    const res = await request(app)
+      .put(`/api/jobs/${job._id}`)
+      .set('Authorization', auth.authHeader)
+      .send({ status: 'completed' });
+
+    expect(res.status).toBe(200);
+    expect(new Date(res.body.endDate).toISOString()).toBe(originalEndDate.toISOString());
+  });
+
   test('PUT updates updatedAt while preserving createdAt', async () => {
     const auth = await createAuthContext();
     const job = await Job.create({ userId: auth.user._id, name: 'Fix Tap', address: '42 Plumber St' });
