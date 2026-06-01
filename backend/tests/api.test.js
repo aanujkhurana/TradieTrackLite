@@ -440,6 +440,7 @@ describe('Property 9: Job creation defaults', () => {
           .send(payload);
         expect(res.status).toBe(201);
         expect(res.body.status).toBe('pending');
+        expect(res.body.updatedAt).toBeDefined();
 
         const createdAt = new Date(res.body.createdAt).getTime();
         expect(createdAt).toBeGreaterThanOrEqual(before - 5000); // allow 5s clock skew
@@ -580,6 +581,21 @@ describe('Unit tests: CRUD routes', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('completed');
     expect(res.body.endDate).toBeDefined();
+  });
+
+  test('PUT updates updatedAt while preserving createdAt', async () => {
+    const auth = await createAuthContext();
+    const job = await Job.create({ userId: auth.user._id, name: 'Fix Tap', address: '42 Plumber St' });
+    const originalCreatedAt = job.createdAt.toISOString();
+
+    const res = await request(app)
+      .put(`/api/jobs/${job._id}`)
+      .set('Authorization', auth.authHeader)
+      .send({ notes: 'updated notes' });
+
+    expect(res.status).toBe(200);
+    expect(new Date(res.body.createdAt).toISOString()).toBe(originalCreatedAt);
+    expect(new Date(res.body.updatedAt).getTime()).toBeGreaterThanOrEqual(job.updatedAt.getTime());
   });
 
   test('PUT updates customerName separately from job name', async () => {

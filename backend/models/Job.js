@@ -15,7 +15,8 @@ const JobSchema = new mongoose.Schema({
   startDate: { type: Date, default: Date.now },
   endDate: { type: Date, default: null },
   reminder: { type: Date, default: null },
-  createdAt: { type: Date, default: Date.now }
+}, {
+  timestamps: true,
 });
 
 module.exports = mongoose.model('Job', JobSchema);
