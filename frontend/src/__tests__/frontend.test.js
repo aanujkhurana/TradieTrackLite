@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 import fc from 'fast-check';
 
 // ---------------------------------------------------------------------------
@@ -270,5 +271,21 @@ describe('JobDetail screen', () => {
     );
 
     expect(getByText('Set Reminder')).toBeTruthy();
+  });
+
+  it('call customer button opens tel URL when a phone number is present', () => {
+    jest.spyOn(Linking, 'openURL').mockResolvedValueOnce(true);
+    const jobWithPhone = {
+      ...baseJob,
+      customerPhone: '0400 123 456',
+    };
+
+    const { getByText } = render(
+      <JobDetail route={{ params: { job: jobWithPhone } }} navigation={mockNavigation} />
+    );
+
+    fireEvent.press(getByText('Call Customer'));
+
+    expect(Linking.openURL).toHaveBeenCalledWith('tel:0400123456');
   });
 });

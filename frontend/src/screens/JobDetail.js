@@ -75,6 +75,15 @@ export default function JobDetail({ route, navigation }) {
       Alert.alert('Error', 'Something went wrong. Please try again.');
     }
   };
+  const callCustomer = async () => {
+    const dialablePhone = customerPhone.replace(/[^\d+]/g, '');
+    if (!dialablePhone) {
+      Alert.alert('No Phone Number', 'Add a customer phone number before calling.');
+      return;
+    }
+
+    await Linking.openURL(`tel:${dialablePhone}`);
+  };
   const save = async () => {
     if (!name.trim() || !address.trim()) {
       Alert.alert('Validation Error', 'Job name and address are required.');
@@ -273,6 +282,12 @@ export default function JobDetail({ route, navigation }) {
           placeholder="Customer phone"
           keyboardType="phone-pad"
         />
+
+        {customerPhone.trim() ? (
+          <TouchableOpacity style={styles.actionBtn} onPress={callCustomer} activeOpacity={0.8}>
+            <Text style={styles.actionBtnText}>Call Customer</Text>
+          </TouchableOpacity>
+        ) : null}
 
         <Text style={styles.label}>Customer Email</Text>
         <TextInput
