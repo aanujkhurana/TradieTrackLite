@@ -17,7 +17,7 @@ This backlog turns TradieTrack Lite from an MVP into a production-ready and genu
 ## Phase 2: Security And Accounts
 
 - [ ] Add user authentication.
-- [ ] Add a `User` model.
+- [x] Add a `User` model.
 - [ ] Add job ownership with `userId` on every job.
 - [ ] Ensure users can only list, edit, delete, and export their own jobs.
 - [ ] Add protected route middleware.

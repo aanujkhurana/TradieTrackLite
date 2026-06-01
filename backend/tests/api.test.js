@@ -13,6 +13,7 @@ jest.setTimeout(60000);
 process.env.NODE_ENV = 'test';
 const app = require('../index');
 const Job = require('../models/Job');
+const User = require('../models/User');
 
 let mongod;
 
@@ -31,6 +32,22 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await Job.deleteMany({});
+  await User.deleteMany({});
+});
+
+describe('User model', () => {
+  test('normalizes email and verifies hashed passwords', async () => {
+    const user = new User({ email: '  Test@Example.COM  ' });
+    await user.setPassword('correct-password');
+    await user.save();
+
+    const saved = await User.findOne({ email: 'test@example.com' });
+    expect(saved).toBeDefined();
+    expect(saved.passwordHash).not.toBe('correct-password');
+    expect(saved.passwordSalt).toBeDefined();
+    await expect(saved.verifyPassword('correct-password')).resolves.toBe(true);
+    await expect(saved.verifyPassword('wrong-password')).resolves.toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
