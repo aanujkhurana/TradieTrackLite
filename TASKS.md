@@ -21,7 +21,7 @@ This backlog turns TradieTrack Lite from an MVP into a production-ready and genu
 - [x] Add job ownership with `userId` on every job.
 - [x] Ensure users can only list, edit, delete, and export their own jobs.
 - [x] Add protected route middleware.
-- [ ] Restrict CORS to known frontend origins.
+- [x] Restrict CORS to known frontend origins.
 - [ ] Add API rate limiting.
 - [ ] Sanitize values interpolated into PDF HTML.
 - [ ] Move secrets and environment-specific values out of code.

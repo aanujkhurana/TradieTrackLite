@@ -6,10 +6,13 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 4000;
+const CORS_ORIGINS = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
 const AUTH_TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || (process.env.NODE_ENV === 'test' ? 'test-secret' : null);
 const AUTH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 const asyncHandler = (handler) => (req, res, next) => {
@@ -26,6 +29,13 @@ const requestLogger = (req, res, next) => {
   });
   next();
 };
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    return callback(null, CORS_ORIGINS.includes(origin));
+  },
+}));
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(requestLogger);

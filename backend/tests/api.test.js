@@ -12,6 +12,7 @@ jest.setTimeout(60000);
 // Set test env before requiring app so mongoose.connect() is skipped
 process.env.NODE_ENV = 'test';
 process.env.AUTH_TOKEN_SECRET = 'test-secret';
+process.env.CORS_ORIGINS = 'http://allowed.example.com';
 const app = require('../index');
 const Job = require('../models/Job');
 const User = require('../models/User');
@@ -107,6 +108,22 @@ describe('Authentication routes', () => {
 
     expect(authenticatedRes.status).toBe(200);
     expect(authenticatedRes.body.user.email).toBe('tradie@example.com');
+  });
+});
+
+describe('CORS', () => {
+  test('allows configured origins and omits CORS headers for other browser origins', async () => {
+    const allowedRes = await request(app)
+      .get('/api/health')
+      .set('Origin', 'http://allowed.example.com');
+    expect(allowedRes.status).toBe(200);
+    expect(allowedRes.headers['access-control-allow-origin']).toBe('http://allowed.example.com');
+
+    const blockedRes = await request(app)
+      .get('/api/health')
+      .set('Origin', 'http://blocked.example.com');
+    expect(blockedRes.status).toBe(200);
+    expect(blockedRes.headers['access-control-allow-origin']).toBeUndefined();
   });
 });
 
