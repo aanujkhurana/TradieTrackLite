@@ -288,4 +288,36 @@ describe('JobDetail screen', () => {
 
     expect(Linking.openURL).toHaveBeenCalledWith('tel:0400123456');
   });
+
+  it('message customer button opens sms URL when a phone number is present', () => {
+    jest.spyOn(Linking, 'openURL').mockResolvedValueOnce(true);
+    const jobWithPhone = {
+      ...baseJob,
+      customerPhone: '0400 123 456',
+    };
+
+    const { getByText } = render(
+      <JobDetail route={{ params: { job: jobWithPhone } }} navigation={mockNavigation} />
+    );
+
+    fireEvent.press(getByText('Message'));
+
+    expect(Linking.openURL).toHaveBeenCalledWith('sms:0400123456');
+  });
+
+  it('email customer button opens mailto URL when an email is present', () => {
+    jest.spyOn(Linking, 'openURL').mockResolvedValueOnce(true);
+    const jobWithEmail = {
+      ...baseJob,
+      customerEmail: 'sarah@example.com',
+    };
+
+    const { getByText } = render(
+      <JobDetail route={{ params: { job: jobWithEmail } }} navigation={mockNavigation} />
+    );
+
+    fireEvent.press(getByText('Email Customer'));
+
+    expect(Linking.openURL).toHaveBeenCalledWith('mailto:sarah@example.com');
+  });
 });

@@ -84,6 +84,24 @@ export default function JobDetail({ route, navigation }) {
 
     await Linking.openURL(`tel:${dialablePhone}`);
   };
+  const messageCustomer = async () => {
+    const dialablePhone = customerPhone.replace(/[^\d+]/g, '');
+    if (!dialablePhone) {
+      Alert.alert('No Phone Number', 'Add a customer phone number before messaging.');
+      return;
+    }
+
+    await Linking.openURL(`sms:${dialablePhone}`);
+  };
+  const emailCustomer = async () => {
+    const email = customerEmail.trim();
+    if (!email) {
+      Alert.alert('No Email Address', 'Add a customer email address before emailing.');
+      return;
+    }
+
+    await Linking.openURL(`mailto:${email}`);
+  };
   const save = async () => {
     if (!name.trim() || !address.trim()) {
       Alert.alert('Validation Error', 'Job name and address are required.');
@@ -284,9 +302,14 @@ export default function JobDetail({ route, navigation }) {
         />
 
         {customerPhone.trim() ? (
-          <TouchableOpacity style={styles.actionBtn} onPress={callCustomer} activeOpacity={0.8}>
-            <Text style={styles.actionBtnText}>Call Customer</Text>
-          </TouchableOpacity>
+          <View style={styles.inlineActions}>
+            <TouchableOpacity style={styles.inlineActionBtn} onPress={callCustomer} activeOpacity={0.8}>
+              <Text style={styles.actionBtnText}>Call Customer</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.inlineActionBtn} onPress={messageCustomer} activeOpacity={0.8}>
+              <Text style={styles.actionBtnText}>Message</Text>
+            </TouchableOpacity>
+          </View>
         ) : null}
 
         <Text style={styles.label}>Customer Email</Text>
@@ -298,6 +321,12 @@ export default function JobDetail({ route, navigation }) {
           keyboardType="email-address"
           autoCapitalize="none"
         />
+
+        {customerEmail.trim() ? (
+          <TouchableOpacity style={styles.actionBtn} onPress={emailCustomer} activeOpacity={0.8}>
+            <Text style={styles.actionBtnText}>Email Customer</Text>
+          </TouchableOpacity>
+        ) : null}
 
         <Text style={styles.label}>Customer Notes</Text>
         <TextInput
@@ -604,6 +633,20 @@ const styles = StyleSheet.create({
     color: '#1565C0',
     fontSize: 15,
     fontWeight: '600',
+  },
+  inlineActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  inlineActionBtn: {
+    flex: 1,
+    backgroundColor: '#f3f8ff',
+    borderWidth: 1,
+    borderColor: '#2196F3',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   pdfBtn: {
     backgroundColor: '#f7f0fb',
