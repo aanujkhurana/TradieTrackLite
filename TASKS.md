@@ -35,7 +35,7 @@ This backlog turns TradieTrack Lite from an MVP into a production-ready and genu
 - [x] Add tap-to-call support in the mobile app.
 - [x] Add tap-to-message or tap-to-email support.
 - [x] Add Mongoose `{ timestamps: true }`.
-- [ ] Add indexes for `userId`, `status`, `reminder`, and `createdAt`.
+- [x] Add indexes for `userId`, `status`, `reminder`, and `createdAt`.
 - [ ] Preserve the current behavior where completing a job auto-sets `endDate` if missing.
 
 ## Phase 4: Real Photo Storage

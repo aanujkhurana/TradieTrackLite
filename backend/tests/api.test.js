@@ -55,6 +55,19 @@ describe('User model', () => {
   });
 });
 
+describe('Job model indexes', () => {
+  test('defines indexes for user-scoped status, reminder, and createdAt queries', () => {
+    const indexes = Job.schema.indexes().map(([fields]) => fields);
+
+    expect(indexes).toEqual(expect.arrayContaining([
+      { userId: 1 },
+      { userId: 1, status: 1 },
+      { userId: 1, reminder: 1 },
+      { userId: 1, createdAt: -1 },
+    ]));
+  });
+});
+
 describe('Authentication routes', () => {
   test('register creates a user and returns a token', async () => {
     const res = await request(app)

@@ -19,4 +19,8 @@ const JobSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+JobSchema.index({ userId: 1, status: 1 });
+JobSchema.index({ userId: 1, reminder: 1 });
+JobSchema.index({ userId: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Job', JobSchema);
