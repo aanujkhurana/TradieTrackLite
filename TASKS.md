@@ -24,7 +24,7 @@ This backlog turns TradieTrack Lite from an MVP into a production-ready and genu
 - [x] Restrict CORS to known frontend origins.
 - [x] Add API rate limiting.
 - [x] Sanitize values interpolated into PDF HTML.
-- [ ] Move secrets and environment-specific values out of code.
+- [x] Move secrets and environment-specific values out of code.
 
 ## Phase 3: Job Model Improvements
 

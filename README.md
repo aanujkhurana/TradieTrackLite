@@ -95,6 +95,11 @@ Example:
 PORT=4000
 MONGO_URI=mongodb://127.0.0.1:27017/tradietrack-lite
 AUTH_TOKEN_SECRET=replace-with-a-long-random-secret
+CORS_ORIGINS=http://localhost:19006,http://localhost:8081
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=1000
+REPORT_TIME_ZONE=Australia/Sydney
+PDF_TMP_DIR=/tmp
 ```
 
 Start the API:

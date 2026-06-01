@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const crypto = require('crypto');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -15,6 +16,8 @@ const CORS_ORIGINS = (process.env.CORS_ORIGINS || '')
   .filter(Boolean);
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
 const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 1000);
+const REPORT_TIME_ZONE = process.env.REPORT_TIME_ZONE || 'Australia/Sydney';
+const PDF_TMP_DIR = process.env.PDF_TMP_DIR || '/tmp';
 const AUTH_TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || (process.env.NODE_ENV === 'test' ? 'test-secret' : null);
 const AUTH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 const asyncHandler = (handler) => (req, res, next) => {
@@ -342,10 +345,10 @@ app.post('/api/jobs/:id/pdf', asyncHandler(authenticate), validateJobId, asyncHa
   const job = await Job.findOne({ _id: req.params.id, userId: req.user._id });
   if (!job) return sendError(res, 404, 'JOB_NOT_FOUND', 'Job not found');
 
-  const pdfPath = `/tmp/${Date.now()}.pdf`;
+  const pdfPath = path.join(PDF_TMP_DIR, `${Date.now()}.pdf`);
 
   try {
-    const timestamp = new Date().toLocaleString('en-AU', { timeZone: 'Australia/Sydney' });
+    const timestamp = new Date().toLocaleString('en-AU', { timeZone: REPORT_TIME_ZONE });
 
     const photoThumbnails = (job.photos || [])
       .map(sanitizePhotoUri)
