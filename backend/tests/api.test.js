@@ -601,14 +601,18 @@ describe('Unit tests: CRUD routes', () => {
 
 // Mock puppeteer to avoid slow/unreliable browser launches in CI
 jest.mock('puppeteer', () => ({
+  __mockPage: {
+    setContent: jest.fn().mockResolvedValue(undefined),
+    pdf: jest.fn().mockImplementation(({ path }) => {
+      // Write an empty file so the route doesn't error
+      require('fs').writeFileSync(path, '');
+      return Promise.resolve();
+    }),
+  },
   launch: jest.fn().mockResolvedValue({
     newPage: jest.fn().mockResolvedValue({
-      setContent: jest.fn().mockResolvedValue(undefined),
-      pdf: jest.fn().mockImplementation(({ path }) => {
-        // Write an empty file so the route doesn't error
-        require('fs').writeFileSync(path, '');
-        return Promise.resolve();
-      }),
+      setContent: jest.fn().mockImplementation((...args) => require('puppeteer').__mockPage.setContent(...args)),
+      pdf: jest.fn().mockImplementation((...args) => require('puppeteer').__mockPage.pdf(...args)),
     }),
     close: jest.fn().mockResolvedValue(undefined),
   }),
@@ -639,5 +643,30 @@ describe('Property 8: PDF produces non-empty URL for any valid job', () => {
       ),
       { numRuns: 10 }
     );
+  });
+
+  test('POST /api/jobs/:id/pdf escapes job text and unsafe photo URIs', async () => {
+    const puppeteer = require('puppeteer');
+    puppeteer.__mockPage.setContent.mockClear();
+    const auth = await createAuthContext();
+    const job = await Job.create({
+      userId: auth.user._id,
+      name: '<script>alert("x")</script>',
+      address: '1 <Main> & Co',
+      notes: 'Use "quotes" and \'apostrophes\'',
+      photos: ['javascript:alert(1)', 'https://example.com/photo.jpg?x=<bad>'],
+    });
+
+    const res = await request(app)
+      .post(`/api/jobs/${job._id}/pdf`)
+      .set('Authorization', auth.authHeader);
+
+    expect(res.status).toBe(200);
+    const html = puppeteer.__mockPage.setContent.mock.calls[0][0];
+    expect(html).toContain('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;');
+    expect(html).toContain('1 &lt;Main&gt; &amp; Co');
+    expect(html).toContain('Use &quot;quotes&quot; and &#39;apostrophes&#39;');
+    expect(html).not.toContain('javascript:alert(1)');
+    expect(html).toContain('https://example.com/photo.jpg?x=&lt;bad&gt;');
   });
 });

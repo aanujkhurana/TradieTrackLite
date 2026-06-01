@@ -23,7 +23,7 @@ This backlog turns TradieTrack Lite from an MVP into a production-ready and genu
 - [x] Add protected route middleware.
 - [x] Restrict CORS to known frontend origins.
 - [x] Add API rate limiting.
-- [ ] Sanitize values interpolated into PDF HTML.
+- [x] Sanitize values interpolated into PDF HTML.
 - [ ] Move secrets and environment-specific values out of code.
 
 ## Phase 3: Job Model Improvements

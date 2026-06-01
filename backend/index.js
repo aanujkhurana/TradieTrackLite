@@ -88,6 +88,21 @@ function parseDateValue(value) {
   return date;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function sanitizePhotoUri(uri) {
+  const value = String(uri || '').trim();
+  if (!/^(https?:|file:|data:image\/)/i.test(value)) return null;
+  return escapeHtml(value);
+}
+
 function encodeTokenPart(value) {
   return Buffer.from(JSON.stringify(value)).toString('base64url');
 }
@@ -333,10 +348,16 @@ app.post('/api/jobs/:id/pdf', asyncHandler(authenticate), validateJobId, asyncHa
     const timestamp = new Date().toLocaleString('en-AU', { timeZone: 'Australia/Sydney' });
 
     const photoThumbnails = (job.photos || [])
+      .map(sanitizePhotoUri)
+      .filter(Boolean)
       .map(uri => `<img src="${uri}" alt="Job photo" style="width:120px;height:90px;object-fit:cover;border-radius:4px;border:1px solid #ddd;" />`)
       .join('');
 
     const statusColour = { pending: '#888', in_progress: '#2196F3', completed: '#4CAF50' }[job.status] || '#888';
+    const safeName = escapeHtml(job.name);
+    const safeAddress = escapeHtml(job.address || '—');
+    const safeStatus = escapeHtml(job.status);
+    const safeNotes = escapeHtml(job.notes || '—');
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -370,22 +391,22 @@ app.post('/api/jobs/:id/pdf', asyncHandler(authenticate), validateJobId, asyncHa
   </style>
 </head>
 <body>
-  <h1>${job.name}</h1>
+  <h1>${safeName}</h1>
   <div class="meta">Generated: ${timestamp}</div>
 
   <div class="section">
     <div class="label">Address</div>
-    <div class="value">${job.address || '—'}</div>
+    <div class="value">${safeAddress}</div>
   </div>
 
   <div class="section">
     <div class="label">Status</div>
-    <span class="status-badge">${job.status}</span>
+    <span class="status-badge">${safeStatus}</span>
   </div>
 
   <div class="section">
     <div class="label">Notes</div>
-    <div class="value">${job.notes || '—'}</div>
+    <div class="value">${safeNotes}</div>
   </div>
 
   ${photoThumbnails ? `
