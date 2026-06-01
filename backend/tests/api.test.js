@@ -467,11 +467,17 @@ describe('Unit tests: CRUD routes', () => {
     const res = await request(app)
       .post('/api/jobs')
       .set('Authorization', auth.authHeader)
-      .send({ name: 'Fix Tap', address: '42 Plumber St', notes: 'Leaking badly' });
+      .send({
+        name: 'Fix Tap',
+        customerName: 'Sarah Williams',
+        address: '42 Plumber St',
+        notes: 'Leaking badly',
+      });
     expect(res.status).toBe(201);
     expect(res.body._id).toBeDefined();
     expect(res.body.userId).toBe(auth.user._id.toString());
     expect(res.body.name).toBe('Fix Tap');
+    expect(res.body.customerName).toBe('Sarah Williams');
     expect(res.body.address).toBe('42 Plumber St');
   });
 
@@ -570,6 +576,25 @@ describe('Unit tests: CRUD routes', () => {
     expect(res.body.endDate).toBeDefined();
   });
 
+  test('PUT updates customerName separately from job name', async () => {
+    const auth = await createAuthContext();
+    const job = await Job.create({
+      userId: auth.user._id,
+      name: 'Fix Tap',
+      customerName: 'Old Customer',
+      address: '42 Plumber St',
+    });
+
+    const res = await request(app)
+      .put(`/api/jobs/${job._id}`)
+      .set('Authorization', auth.authHeader)
+      .send({ name: 'Fix Kitchen Tap', customerName: 'New Customer' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('Fix Kitchen Tap');
+    expect(res.body.customerName).toBe('New Customer');
+  });
+
   test('users cannot access jobs owned by another user', async () => {
     const owner = await createAuthContext();
     const other = await createAuthContext();
@@ -652,6 +677,7 @@ describe('Property 8: PDF produces non-empty URL for any valid job', () => {
     const job = await Job.create({
       userId: auth.user._id,
       name: '<script>alert("x")</script>',
+      customerName: '<b>Customer</b>',
       address: '1 <Main> & Co',
       notes: 'Use "quotes" and \'apostrophes\'',
       photos: ['javascript:alert(1)', 'https://example.com/photo.jpg?x=<bad>'],
@@ -664,6 +690,7 @@ describe('Property 8: PDF produces non-empty URL for any valid job', () => {
     expect(res.status).toBe(200);
     const html = puppeteer.__mockPage.setContent.mock.calls[0][0];
     expect(html).toContain('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;');
+    expect(html).toContain('&lt;b&gt;Customer&lt;/b&gt;');
     expect(html).toContain('1 &lt;Main&gt; &amp; Co');
     expect(html).toContain('Use &quot;quotes&quot; and &#39;apostrophes&#39;');
     expect(html).not.toContain('javascript:alert(1)');

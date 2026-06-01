@@ -166,6 +166,7 @@ Base URL: `/api`
 ```json
 {
   "name": "Fix kitchen tap",
+  "customerName": "Sarah Williams",
   "address": "12 Main St",
   "notes": "Leaking under sink",
   "status": "pending",

@@ -39,6 +39,7 @@ export default function JobDetail({ route, navigation }) {
   const { token } = useAuth();
 
   const [name, setName] = useState(job.name || '');
+  const [customerName, setCustomerName] = useState(job.customerName || '');
   const [address, setAddress] = useState(job.address || '');
   const [notes, setNotes] = useState(job.notes || '');
   const [status, setStatus] = useState(job.status || 'pending');
@@ -92,6 +93,7 @@ export default function JobDetail({ route, navigation }) {
         `${API_URL}/jobs/${job._id}`,
         {
           name: name.trim(),
+          customerName: customerName.trim(),
           address: address.trim(),
           notes,
           status,
@@ -247,6 +249,14 @@ export default function JobDetail({ route, navigation }) {
           value={name}
           onChangeText={setName}
           placeholder="Job name"
+        />
+
+        <Text style={styles.label}>Customer Name</Text>
+        <TextInput
+          style={styles.input}
+          value={customerName}
+          onChangeText={setCustomerName}
+          placeholder="Customer name"
         />
 
         <Text style={styles.label}>Address</Text>

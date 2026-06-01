@@ -16,6 +16,7 @@ import { getApiErrorMessage } from '../utils/apiError';
 export default function CreateJob({ navigation }) {
   const { token } = useAuth();
   const [name, setName] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [nameError, setNameError] = useState('');
@@ -40,7 +41,12 @@ export default function CreateJob({ navigation }) {
     try {
       await axios.post(
         `${API_URL}/jobs`,
-        { name: name.trim(), address: address.trim(), notes },
+        {
+          name: name.trim(),
+          customerName: customerName.trim(),
+          address: address.trim(),
+          notes,
+        },
         getAuthConfig(token)
       );
       navigation.goBack();
@@ -72,6 +78,15 @@ export default function CreateJob({ navigation }) {
           returnKeyType="next"
         />
         {nameError ? <Text style={styles.error}>{nameError}</Text> : null}
+
+        <Text style={styles.label}>Customer Name</Text>
+        <TextInput
+          style={styles.input}
+          value={customerName}
+          onChangeText={setCustomerName}
+          placeholder="e.g. Sarah Williams"
+          returnKeyType="next"
+        />
 
         <Text style={styles.label}>Address *</Text>
         <TextInput

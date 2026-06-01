@@ -28,7 +28,7 @@ This backlog turns TradieTrack Lite from an MVP into a production-ready and genu
 
 ## Phase 3: Job Model Improvements
 
-- [ ] Separate job title from customer name.
+- [x] Separate job title from customer name.
 - [ ] Add customer phone number.
 - [ ] Add customer email.
 - [ ] Add optional customer notes.

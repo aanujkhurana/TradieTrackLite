@@ -358,6 +358,7 @@ app.post('/api/jobs/:id/pdf', asyncHandler(authenticate), validateJobId, asyncHa
 
     const statusColour = { pending: '#888', in_progress: '#2196F3', completed: '#4CAF50' }[job.status] || '#888';
     const safeName = escapeHtml(job.name);
+    const safeCustomerName = escapeHtml(job.customerName || '—');
     const safeAddress = escapeHtml(job.address || '—');
     const safeStatus = escapeHtml(job.status);
     const safeNotes = escapeHtml(job.notes || '—');
@@ -396,6 +397,11 @@ app.post('/api/jobs/:id/pdf', asyncHandler(authenticate), validateJobId, asyncHa
 <body>
   <h1>${safeName}</h1>
   <div class="meta">Generated: ${timestamp}</div>
+
+  <div class="section">
+    <div class="label">Customer</div>
+    <div class="value">${safeCustomerName}</div>
+  </div>
 
   <div class="section">
     <div class="label">Address</div>

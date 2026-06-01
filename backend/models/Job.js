@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const JobSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   name: { type: String, required: true, trim: true, minlength: 1 },
+  customerName: { type: String, trim: true, default: '' },
   address: { type: String, required: true, trim: true, minlength: 1 },
   notes: String,
   status: { type: String, enum: ['pending', 'in_progress', 'completed'], default: 'pending' },

@@ -119,6 +119,11 @@ export default function Jobs({ navigation }) {
         <View style={styles.rowContent}>
           <View style={styles.rowMain}>
             <Text style={styles.jobName} numberOfLines={1}>{item.name}</Text>
+            {item.customerName ? (
+              <Text style={styles.customerName} numberOfLines={1}>
+                {item.customerName}
+              </Text>
+            ) : null}
             <Text style={styles.jobAddress} numberOfLines={1}>
               {item.address || 'No address'}
             </Text>
@@ -280,6 +285,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#1f2937',
+  },
+  customerName: {
+    color: '#374151',
+    fontSize: 13,
+    fontWeight: '600',
   },
   jobAddress: {
     color: '#718096',
