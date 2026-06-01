@@ -11,6 +11,7 @@ jest.setTimeout(60000);
 
 // Set test env before requiring app so mongoose.connect() is skipped
 process.env.NODE_ENV = 'test';
+process.env.AUTH_TOKEN_SECRET = 'test-secret';
 const app = require('../index');
 const Job = require('../models/Job');
 const User = require('../models/User');
@@ -47,6 +48,64 @@ describe('User model', () => {
     expect(saved.passwordSalt).toBeDefined();
     await expect(saved.verifyPassword('correct-password')).resolves.toBe(true);
     await expect(saved.verifyPassword('wrong-password')).resolves.toBe(false);
+  });
+});
+
+describe('Authentication routes', () => {
+  test('register creates a user and returns a token', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'tradie@example.com', password: 'password123' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.email).toBe('tradie@example.com');
+
+    const saved = await User.findOne({ email: 'tradie@example.com' });
+    expect(saved).toBeDefined();
+  });
+
+  test('login returns a token for valid credentials', async () => {
+    const user = new User({ email: 'tradie@example.com' });
+    await user.setPassword('password123');
+    await user.save();
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'tradie@example.com', password: 'password123' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.email).toBe('tradie@example.com');
+  });
+
+  test('login rejects invalid credentials', async () => {
+    const user = new User({ email: 'tradie@example.com' });
+    await user.setPassword('password123');
+    await user.save();
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'tradie@example.com', password: 'wrongpass' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('INVALID_CREDENTIALS');
+  });
+
+  test('protected me endpoint requires a valid bearer token', async () => {
+    const registerRes = await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'tradie@example.com', password: 'password123' });
+
+    const unauthenticatedRes = await request(app).get('/api/auth/me');
+    expect(unauthenticatedRes.status).toBe(401);
+
+    const authenticatedRes = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${registerRes.body.token}`);
+
+    expect(authenticatedRes.status).toBe(200);
+    expect(authenticatedRes.body.user.email).toBe('tradie@example.com');
   });
 });
 

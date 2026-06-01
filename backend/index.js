@@ -2,6 +2,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -9,6 +10,8 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 4000;
+const AUTH_TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || (process.env.NODE_ENV === 'test' ? 'test-secret' : null);
+const AUTH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 const asyncHandler = (handler) => (req, res, next) => {
   Promise.resolve(handler(req, res, next)).catch(next);
 };
@@ -33,6 +36,10 @@ if (process.env.NODE_ENV !== 'test') {
     console.error('Missing required environment variable: MONGO_URI');
     process.exit(1);
   }
+  if (!AUTH_TOKEN_SECRET) {
+    console.error('Missing required environment variable: AUTH_TOKEN_SECRET');
+    process.exit(1);
+  }
 
   mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB connected'))
@@ -40,10 +47,95 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 const Job = require('./models/Job');
+const User = require('./models/User');
 function parseDateValue(value) {
   const date = new Date(value);
   if (isNaN(date.getTime())) return null;
   return date;
+}
+
+function encodeTokenPart(value) {
+  return Buffer.from(JSON.stringify(value)).toString('base64url');
+}
+
+function signTokenPayload(encodedHeader, encodedPayload) {
+  return crypto
+    .createHmac('sha256', AUTH_TOKEN_SECRET)
+    .update(`${encodedHeader}.${encodedPayload}`)
+    .digest('base64url');
+}
+
+function createAuthToken(user) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const payload = {
+    sub: user._id.toString(),
+    email: user.email,
+    exp: Math.floor(Date.now() / 1000) + AUTH_TOKEN_TTL_SECONDS,
+  };
+  const encodedHeader = encodeTokenPart(header);
+  const encodedPayload = encodeTokenPart(payload);
+  const signature = signTokenPayload(encodedHeader, encodedPayload);
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
+function verifyAuthToken(token) {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+
+  const [encodedHeader, encodedPayload, signature] = parts;
+  const expectedSignature = signTokenPayload(encodedHeader, encodedPayload);
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+
+  if (signatureBuffer.length !== expectedBuffer.length) return null;
+  if (!crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+    if (!payload.sub || !payload.exp || payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return payload;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function authenticate(req, res, next) {
+  const authHeader = req.get('authorization') || '';
+  const [scheme, token] = authHeader.split(' ');
+
+  if (scheme !== 'Bearer' || !token) {
+    return sendError(res, 401, 'UNAUTHENTICATED', 'Authentication required');
+  }
+
+  const payload = verifyAuthToken(token);
+  if (!payload) {
+    return sendError(res, 401, 'UNAUTHENTICATED', 'Invalid or expired token');
+  }
+
+  const user = await User.findById(payload.sub);
+  if (!user) {
+    return sendError(res, 401, 'UNAUTHENTICATED', 'Invalid or expired token');
+  }
+
+  req.user = user;
+  return next();
+}
+
+function serializeUser(user) {
+  return {
+    id: user._id.toString(),
+    email: user.email,
+  };
+}
+
+function validateAuthPayload(req, res, next) {
+  const { email, password } = req.body;
+
+  if (!email || !String(email).trim() || !password || String(password).length < 8) {
+    return sendError(res, 400, 'VALIDATION_ERROR', 'email and password of at least 8 characters are required');
+  }
+
+  return next();
 }
 
 function validateJobId(req, res, next) {
@@ -107,6 +199,33 @@ function validateJob(req, res, next) {
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true });
+});
+
+app.post('/api/auth/register', validateAuthPayload, asyncHandler(async (req, res) => {
+  const email = String(req.body.email).trim().toLowerCase();
+  const existing = await User.findOne({ email });
+  if (existing) return sendError(res, 409, 'EMAIL_ALREADY_REGISTERED', 'Email is already registered');
+
+  const user = new User({ email });
+  await user.setPassword(String(req.body.password));
+  await user.save();
+
+  res.status(201).json({ token: createAuthToken(user), user: serializeUser(user) });
+}));
+
+app.post('/api/auth/login', validateAuthPayload, asyncHandler(async (req, res) => {
+  const email = String(req.body.email).trim().toLowerCase();
+  const user = await User.findOne({ email });
+
+  if (!user || !(await user.verifyPassword(String(req.body.password)))) {
+    return sendError(res, 401, 'INVALID_CREDENTIALS', 'Invalid email or password');
+  }
+
+  res.json({ token: createAuthToken(user), user: serializeUser(user) });
+}));
+
+app.get('/api/auth/me', asyncHandler(authenticate), (req, res) => {
+  res.json({ user: serializeUser(req.user) });
 });
 
 app.get('/api/jobs', asyncHandler(async (req, res) => {
