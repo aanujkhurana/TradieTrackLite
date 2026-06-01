@@ -17,6 +17,7 @@ export default function CreateJob({ navigation }) {
   const { token } = useAuth();
   const [name, setName] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [nameError, setNameError] = useState('');
@@ -44,6 +45,7 @@ export default function CreateJob({ navigation }) {
         {
           name: name.trim(),
           customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
           address: address.trim(),
           notes,
         },
@@ -85,6 +87,16 @@ export default function CreateJob({ navigation }) {
           value={customerName}
           onChangeText={setCustomerName}
           placeholder="e.g. Sarah Williams"
+          returnKeyType="next"
+        />
+
+        <Text style={styles.label}>Customer Phone</Text>
+        <TextInput
+          style={styles.input}
+          value={customerPhone}
+          onChangeText={setCustomerPhone}
+          placeholder="e.g. 0400 123 456"
+          keyboardType="phone-pad"
           returnKeyType="next"
         />
 

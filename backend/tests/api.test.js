@@ -470,6 +470,7 @@ describe('Unit tests: CRUD routes', () => {
       .send({
         name: 'Fix Tap',
         customerName: 'Sarah Williams',
+        customerPhone: '0400 123 456',
         address: '42 Plumber St',
         notes: 'Leaking badly',
       });
@@ -478,6 +479,7 @@ describe('Unit tests: CRUD routes', () => {
     expect(res.body.userId).toBe(auth.user._id.toString());
     expect(res.body.name).toBe('Fix Tap');
     expect(res.body.customerName).toBe('Sarah Williams');
+    expect(res.body.customerPhone).toBe('0400 123 456');
     expect(res.body.address).toBe('42 Plumber St');
   });
 
@@ -582,17 +584,23 @@ describe('Unit tests: CRUD routes', () => {
       userId: auth.user._id,
       name: 'Fix Tap',
       customerName: 'Old Customer',
+      customerPhone: '0400 111 222',
       address: '42 Plumber St',
     });
 
     const res = await request(app)
       .put(`/api/jobs/${job._id}`)
       .set('Authorization', auth.authHeader)
-      .send({ name: 'Fix Kitchen Tap', customerName: 'New Customer' });
+      .send({
+        name: 'Fix Kitchen Tap',
+        customerName: 'New Customer',
+        customerPhone: '0400 333 444',
+      });
 
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Fix Kitchen Tap');
     expect(res.body.customerName).toBe('New Customer');
+    expect(res.body.customerPhone).toBe('0400 333 444');
   });
 
   test('users cannot access jobs owned by another user', async () => {
@@ -678,6 +686,7 @@ describe('Property 8: PDF produces non-empty URL for any valid job', () => {
       userId: auth.user._id,
       name: '<script>alert("x")</script>',
       customerName: '<b>Customer</b>',
+      customerPhone: '<img src=x>',
       address: '1 <Main> & Co',
       notes: 'Use "quotes" and \'apostrophes\'',
       photos: ['javascript:alert(1)', 'https://example.com/photo.jpg?x=<bad>'],
@@ -691,6 +700,7 @@ describe('Property 8: PDF produces non-empty URL for any valid job', () => {
     const html = puppeteer.__mockPage.setContent.mock.calls[0][0];
     expect(html).toContain('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;');
     expect(html).toContain('&lt;b&gt;Customer&lt;/b&gt;');
+    expect(html).toContain('&lt;img src=x&gt;');
     expect(html).toContain('1 &lt;Main&gt; &amp; Co');
     expect(html).toContain('Use &quot;quotes&quot; and &#39;apostrophes&#39;');
     expect(html).not.toContain('javascript:alert(1)');

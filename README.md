@@ -167,6 +167,7 @@ Base URL: `/api`
 {
   "name": "Fix kitchen tap",
   "customerName": "Sarah Williams",
+  "customerPhone": "0400 123 456",
   "address": "12 Main St",
   "notes": "Leaking under sink",
   "status": "pending",
