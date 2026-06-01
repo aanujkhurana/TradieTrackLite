@@ -94,6 +94,7 @@ Example:
 ```env
 PORT=4000
 MONGO_URI=mongodb://127.0.0.1:27017/tradietrack-lite
+AUTH_TOKEN_SECRET=replace-with-a-long-random-secret
 ```
 
 Start the API:

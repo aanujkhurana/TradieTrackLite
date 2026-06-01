@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { API_URL } from '../config';
+import { getAuthConfig, useAuth } from '../AuthContext';
 import { getApiErrorMessage } from '../utils/apiError';
 
 export default function CreateJob({ navigation }) {
+  const { token } = useAuth();
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
@@ -36,7 +38,11 @@ export default function CreateJob({ navigation }) {
     if (!valid) return;
 
     try {
-      await axios.post(`${API_URL}/jobs`, { name: name.trim(), address: address.trim(), notes });
+      await axios.post(
+        `${API_URL}/jobs`,
+        { name: name.trim(), address: address.trim(), notes },
+        getAuthConfig(token)
+      );
       navigation.goBack();
     } catch (err) {
       if (err.response?.status === 400) {

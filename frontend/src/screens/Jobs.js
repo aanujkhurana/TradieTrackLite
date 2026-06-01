@@ -10,6 +10,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { API_URL } from '../config';
+import { getAuthConfig, useAuth } from '../AuthContext';
 import { formatLoggedDuration } from '../utils/time';
 
 const STATUS_META = {
@@ -19,12 +20,13 @@ const STATUS_META = {
 };
 
 export default function Jobs({ navigation }) {
+  const { token, signOut } = useAuth();
   const [jobs, setJobs] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchJobs = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_URL}/jobs`);
+      const res = await axios.get(`${API_URL}/jobs`, getAuthConfig(token));
       const rows = Array.isArray(res.data) ? res.data : [];
       const sorted = [...rows].sort((a, b) => {
         const aTime = new Date(a.createdAt || 0).getTime();
@@ -35,7 +37,7 @@ export default function Jobs({ navigation }) {
     } catch (err) {
       Alert.alert('No connection', 'No connection — changes not saved');
     }
-  }, []);
+  }, [token]);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchJobs();
@@ -60,7 +62,7 @@ export default function Jobs({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await axios.delete(`${API_URL}/jobs/${job._id}`);
+              await axios.delete(`${API_URL}/jobs/${job._id}`, getAuthConfig(token));
               // Remove from local state on success (req 4.3)
               setJobs((prev) => prev.filter((j) => j._id !== job._id));
             } catch (err) {
@@ -145,13 +147,18 @@ export default function Jobs({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.addBtn}
-        onPress={() => navigation.navigate('CreateJob')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.addBtnText}>+ Add New Job</Text>
-      </TouchableOpacity>
+      <View style={styles.topActions}>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => navigation.navigate('CreateJob')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.addBtnText}>+ Add New Job</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.signOutBtn} onPress={signOut} activeOpacity={0.8}>
+          <Text style={styles.signOutBtnText}>Sign Out</Text>
+        </TouchableOpacity>
+      </View>
 
       <FlatList
         data={jobs}
@@ -178,12 +185,17 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 20,
   },
+  topActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
   addBtn: {
+    flex: 1,
     backgroundColor: '#1565C0',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',
-    marginBottom: 16,
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -193,6 +205,20 @@ const styles = StyleSheet.create({
   addBtnText: {
     color: '#fff',
     fontSize: 17,
+    fontWeight: '700',
+  },
+  signOutBtn: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#d9e0e8',
+  },
+  signOutBtnText: {
+    color: '#1565C0',
+    fontSize: 14,
     fontWeight: '700',
   },
   summaryCard: {

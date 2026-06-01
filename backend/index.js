@@ -228,12 +228,12 @@ app.get('/api/auth/me', asyncHandler(authenticate), (req, res) => {
   res.json({ user: serializeUser(req.user) });
 });
 
-app.get('/api/jobs', asyncHandler(async (req, res) => {
-  res.json(await Job.find());
+app.get('/api/jobs', asyncHandler(authenticate), asyncHandler(async (req, res) => {
+  res.json(await Job.find({ userId: req.user._id }));
 }));
 
-app.post('/api/jobs', validateJob, asyncHandler(async (req, res) => {
-  const payload = { ...req.body };
+app.post('/api/jobs', asyncHandler(authenticate), validateJob, asyncHandler(async (req, res) => {
+  const payload = { ...req.body, userId: req.user._id };
 
   if (payload.status === 'completed' && !payload.endDate) {
     payload.endDate = new Date().toISOString();
@@ -244,13 +244,14 @@ app.post('/api/jobs', validateJob, asyncHandler(async (req, res) => {
   res.status(201).json(job);
 }));
 
-app.put('/api/jobs/:id', validateJobId, validateJob, asyncHandler(async (req, res) => {
-  const existing = await Job.findById(req.params.id);
+app.put('/api/jobs/:id', asyncHandler(authenticate), validateJobId, validateJob, asyncHandler(async (req, res) => {
+  const existing = await Job.findOne({ _id: req.params.id, userId: req.user._id });
   if (!existing) return sendError(res, 404, 'JOB_NOT_FOUND', 'Job not found');
 
   // Strip createdAt from update payload to prevent mutation
   const update = { ...req.body };
   delete update.createdAt;
+  delete update.userId;
   // Auto-set endDate when marking completed for the first time
   if (update.status === 'completed') {
     const hasCurrentEndDate = update.endDate !== undefined ? update.endDate : existing.endDate;
@@ -269,23 +270,27 @@ app.put('/api/jobs/:id', validateJobId, validateJob, asyncHandler(async (req, re
     }
   }
 
-  const job = await Job.findByIdAndUpdate(req.params.id, update, { new: true });
+  const job = await Job.findOneAndUpdate(
+    { _id: req.params.id, userId: req.user._id },
+    update,
+    { new: true }
+  );
   res.json(job);
 }));
 
-app.delete('/api/jobs/:id', validateJobId, asyncHandler(async (req, res) => {
-  const existing = await Job.findById(req.params.id);
+app.delete('/api/jobs/:id', asyncHandler(authenticate), validateJobId, asyncHandler(async (req, res) => {
+  const existing = await Job.findOne({ _id: req.params.id, userId: req.user._id });
   if (!existing) return sendError(res, 404, 'JOB_NOT_FOUND', 'Job not found');
 
-  await Job.findByIdAndDelete(req.params.id);
+  await Job.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
   res.json({ ok: true });
 }));
 
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 
-app.post('/api/jobs/:id/pdf', validateJobId, asyncHandler(async (req, res) => {
-  const job = await Job.findById(req.params.id);
+app.post('/api/jobs/:id/pdf', asyncHandler(authenticate), validateJobId, asyncHandler(async (req, res) => {
+  const job = await Job.findOne({ _id: req.params.id, userId: req.user._id });
   if (!job) return sendError(res, 404, 'JOB_NOT_FOUND', 'Job not found');
 
   const pdfPath = `/tmp/${Date.now()}.pdf`;

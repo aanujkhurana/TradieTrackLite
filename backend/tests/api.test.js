@@ -17,6 +17,7 @@ const Job = require('../models/Job');
 const User = require('../models/User');
 
 let mongod;
+let authUserCounter = 0;
 
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create();
@@ -130,6 +131,22 @@ function validUpdateArb() {
   }, { requiredKeys: [] });
 }
 
+async function createAuthContext() {
+  authUserCounter += 1;
+  const email = `tradie${authUserCounter}@example.com`;
+  const password = 'password123';
+  const registerRes = await request(app)
+    .post('/api/auth/register')
+    .send({ email, password });
+  const user = await User.findOne({ email });
+
+  return {
+    user,
+    token: registerRes.body.token,
+    authHeader: `Bearer ${registerRes.body.token}`,
+  };
+}
+
 function randomObjectId() {
   // Generate a valid-format ObjectId that is not in the DB
   const hex = () => Math.floor(Math.random() * 16).toString(16);
@@ -146,11 +163,17 @@ describe('Property 1: Create then list round-trip', () => {
     await fc.assert(
       fc.asyncProperty(validJobArb(), async (payload) => {
         await Job.deleteMany({});
+        const auth = await createAuthContext();
 
-        const postRes = await request(app).post('/api/jobs').send(payload);
+        const postRes = await request(app)
+          .post('/api/jobs')
+          .set('Authorization', auth.authHeader)
+          .send(payload);
         expect(postRes.status).toBe(201);
 
-        const getRes = await request(app).get('/api/jobs');
+        const getRes = await request(app)
+          .get('/api/jobs')
+          .set('Authorization', auth.authHeader);
         expect(getRes.status).toBe(200);
 
         const found = getRes.body.find(
@@ -180,8 +203,12 @@ describe('Property 2: Invalid payload rejection', () => {
         }),
         async (payload) => {
           await Job.deleteMany({});
+          const auth = await createAuthContext();
           const before = await Job.countDocuments();
-          const res = await request(app).post('/api/jobs').send(payload);
+          const res = await request(app)
+            .post('/api/jobs')
+            .set('Authorization', auth.authHeader)
+            .send(payload);
           expect(res.status).toBe(400);
           const after = await Job.countDocuments();
           expect(after).toBe(before);
@@ -202,8 +229,12 @@ describe('Property 2: Invalid payload rejection', () => {
         }),
         async (payload) => {
           await Job.deleteMany({});
+          const auth = await createAuthContext();
           const before = await Job.countDocuments();
-          const res = await request(app).post('/api/jobs').send(payload);
+          const res = await request(app)
+            .post('/api/jobs')
+            .set('Authorization', auth.authHeader)
+            .send(payload);
           expect(res.status).toBe(400);
           const after = await Job.countDocuments();
           expect(after).toBe(before);
@@ -220,12 +251,14 @@ describe('Property 2: Invalid payload rejection', () => {
       fc.asyncProperty(
         fc.constantFrom(...invalidStatuses),
         async (badStatus) => {
+          const auth = await createAuthContext();
           // Create a valid job first
-          const job = await Job.create({ name: 'Test', address: '1 St' });
+          const job = await Job.create({ userId: auth.user._id, name: 'Test', address: '1 St' });
           const originalStatus = job.status;
 
           const res = await request(app)
             .put(`/api/jobs/${job._id}`)
+            .set('Authorization', auth.authHeader)
             .send({ status: badStatus });
           expect(res.status).toBe(400);
 
@@ -251,11 +284,13 @@ describe('Property 3: Update preserves createdAt', () => {
     await fc.assert(
       fc.asyncProperty(validUpdateArb(), async (updatePayload) => {
         await Job.deleteMany({});
-        const job = await Job.create({ name: 'Original', address: '1 Main St' });
+        const auth = await createAuthContext();
+        const job = await Job.create({ userId: auth.user._id, name: 'Original', address: '1 Main St' });
         const originalCreatedAt = job.createdAt.toISOString();
 
         const res = await request(app)
           .put(`/api/jobs/${job._id}`)
+          .set('Authorization', auth.authHeader)
           .send(updatePayload);
 
         expect(res.status).toBe(200);
@@ -279,11 +314,12 @@ describe('Property 4: Non-existent job returns 404', () => {
         async (fakeId) => {
           // Ensure this id is not in DB
           await Job.deleteMany({});
+          const auth = await createAuthContext();
 
           const [putRes, delRes, pdfRes] = await Promise.all([
-            request(app).put(`/api/jobs/${fakeId}`).send({ notes: 'x' }),
-            request(app).delete(`/api/jobs/${fakeId}`),
-            request(app).post(`/api/jobs/${fakeId}/pdf`),
+            request(app).put(`/api/jobs/${fakeId}`).set('Authorization', auth.authHeader).send({ notes: 'x' }),
+            request(app).delete(`/api/jobs/${fakeId}`).set('Authorization', auth.authHeader),
+            request(app).post(`/api/jobs/${fakeId}/pdf`).set('Authorization', auth.authHeader),
           ]);
 
           expect(putRes.status).toBe(404);
@@ -299,11 +335,12 @@ describe('Property 4: Non-existent job returns 404', () => {
 describe('ObjectId validation', () => {
   test('PUT, DELETE, and POST /pdf for malformed ids all return 400', async () => {
     const badId = 'not-an-object-id';
+    const auth = await createAuthContext();
 
     const [putRes, delRes, pdfRes] = await Promise.all([
-      request(app).put(`/api/jobs/${badId}`).send({ notes: 'x' }),
-      request(app).delete(`/api/jobs/${badId}`),
-      request(app).post(`/api/jobs/${badId}/pdf`),
+      request(app).put(`/api/jobs/${badId}`).set('Authorization', auth.authHeader).send({ notes: 'x' }),
+      request(app).delete(`/api/jobs/${badId}`).set('Authorization', auth.authHeader),
+      request(app).post(`/api/jobs/${badId}/pdf`).set('Authorization', auth.authHeader),
     ]);
 
     expect(putRes.status).toBe(400);
@@ -325,15 +362,23 @@ describe('Property 5: Delete removes job from list', () => {
     await fc.assert(
       fc.asyncProperty(validJobArb(), async (payload) => {
         await Job.deleteMany({});
+        const auth = await createAuthContext();
 
-        const postRes = await request(app).post('/api/jobs').send(payload);
+        const postRes = await request(app)
+          .post('/api/jobs')
+          .set('Authorization', auth.authHeader)
+          .send(payload);
         expect(postRes.status).toBe(201);
         const jobId = postRes.body._id;
 
-        const delRes = await request(app).delete(`/api/jobs/${jobId}`);
+        const delRes = await request(app)
+          .delete(`/api/jobs/${jobId}`)
+          .set('Authorization', auth.authHeader);
         expect(delRes.status).toBe(200);
 
-        const getRes = await request(app).get('/api/jobs');
+        const getRes = await request(app)
+          .get('/api/jobs')
+          .set('Authorization', auth.authHeader);
         const ids = getRes.body.map(j => j._id);
         expect(ids).not.toContain(jobId);
       }),
@@ -352,9 +397,13 @@ describe('Property 9: Job creation defaults', () => {
     await fc.assert(
       fc.asyncProperty(validJobArb(), async (payload) => {
         await Job.deleteMany({});
+        const auth = await createAuthContext();
         const before = Date.now();
 
-        const res = await request(app).post('/api/jobs').send(payload);
+        const res = await request(app)
+          .post('/api/jobs')
+          .set('Authorization', auth.authHeader)
+          .send(payload);
         expect(res.status).toBe(201);
         expect(res.body.status).toBe('pending');
 
@@ -380,41 +429,52 @@ describe('Unit tests: CRUD routes', () => {
   });
 
   test('valid POST returns 201 with job document', async () => {
+    const auth = await createAuthContext();
     const res = await request(app)
       .post('/api/jobs')
+      .set('Authorization', auth.authHeader)
       .send({ name: 'Fix Tap', address: '42 Plumber St', notes: 'Leaking badly' });
     expect(res.status).toBe(201);
     expect(res.body._id).toBeDefined();
+    expect(res.body.userId).toBe(auth.user._id.toString());
     expect(res.body.name).toBe('Fix Tap');
     expect(res.body.address).toBe('42 Plumber St');
   });
 
   test('POST missing name returns 400', async () => {
+    const auth = await createAuthContext();
     const res = await request(app)
       .post('/api/jobs')
+      .set('Authorization', auth.authHeader)
       .send({ address: '42 Plumber St' });
     expect(res.status).toBe(400);
     expect(res.body.error.message).toMatch(/name and address/i);
   });
 
   test('POST missing address returns 400', async () => {
+    const auth = await createAuthContext();
     const res = await request(app)
       .post('/api/jobs')
+      .set('Authorization', auth.authHeader)
       .send({ name: 'Fix Tap' });
     expect(res.status).toBe(400);
     expect(res.body.error.message).toMatch(/name and address/i);
   });
 
   test('PUT with invalid status returns 400', async () => {
-    const job = await Job.create({ name: 'Fix Tap', address: '42 Plumber St' });
+    const auth = await createAuthContext();
+    const job = await Job.create({ userId: auth.user._id, name: 'Fix Tap', address: '42 Plumber St' });
     const res = await request(app)
       .put(`/api/jobs/${job._id}`)
+      .set('Authorization', auth.authHeader)
       .send({ status: 'done' });
     expect(res.status).toBe(400);
   });
   test('POST completed job without endDate auto-populates endDate', async () => {
+    const auth = await createAuthContext();
     const res = await request(app)
       .post('/api/jobs')
+      .set('Authorization', auth.authHeader)
       .send({ name: 'Finish install', address: '77 Pipe Rd', status: 'completed' });
     expect(res.status).toBe(201);
     expect(res.body.endDate).toBeDefined();
@@ -422,46 +482,81 @@ describe('Unit tests: CRUD routes', () => {
   });
 
   test('DELETE existing job returns { ok: true }', async () => {
-    const job = await Job.create({ name: 'Fix Tap', address: '42 Plumber St' });
-    const res = await request(app).delete(`/api/jobs/${job._id}`);
+    const auth = await createAuthContext();
+    const job = await Job.create({ userId: auth.user._id, name: 'Fix Tap', address: '42 Plumber St' });
+    const res = await request(app)
+      .delete(`/api/jobs/${job._id}`)
+      .set('Authorization', auth.authHeader);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ ok: true });
   });
 
   test('PUT unknown id returns 404', async () => {
+    const auth = await createAuthContext();
     const fakeId = new mongoose.Types.ObjectId().toString();
     const res = await request(app)
       .put(`/api/jobs/${fakeId}`)
+      .set('Authorization', auth.authHeader)
       .send({ notes: 'update' });
     expect(res.status).toBe(404);
     expect(res.body.error.message).toMatch(/not found/i);
   });
 
   test('DELETE unknown id returns 404', async () => {
+    const auth = await createAuthContext();
     const fakeId = new mongoose.Types.ObjectId().toString();
-    const res = await request(app).delete(`/api/jobs/${fakeId}`);
+    const res = await request(app)
+      .delete(`/api/jobs/${fakeId}`)
+      .set('Authorization', auth.authHeader);
     expect(res.status).toBe(404);
     expect(res.body.error.message).toMatch(/not found/i);
   });
   test('PUT rejects endDate before startDate', async () => {
-    const job = await Job.create({ name: 'Fix Tap', address: '42 Plumber St' });
+    const auth = await createAuthContext();
+    const job = await Job.create({ userId: auth.user._id, name: 'Fix Tap', address: '42 Plumber St' });
     const startDate = new Date('2026-01-02T10:00:00.000Z').toISOString();
     const endDate = new Date('2026-01-02T08:00:00.000Z').toISOString();
     const res = await request(app)
       .put(`/api/jobs/${job._id}`)
+      .set('Authorization', auth.authHeader)
       .send({ startDate, endDate });
     expect(res.status).toBe(400);
     expect(res.body.error.message).toMatch(/endDate/i);
   });
 
   test('PUT completed status auto-sets endDate when missing', async () => {
-    const job = await Job.create({ name: 'Fix Tap', address: '42 Plumber St' });
+    const auth = await createAuthContext();
+    const job = await Job.create({ userId: auth.user._id, name: 'Fix Tap', address: '42 Plumber St' });
     const res = await request(app)
       .put(`/api/jobs/${job._id}`)
+      .set('Authorization', auth.authHeader)
       .send({ status: 'completed' });
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('completed');
     expect(res.body.endDate).toBeDefined();
+  });
+
+  test('users cannot access jobs owned by another user', async () => {
+    const owner = await createAuthContext();
+    const other = await createAuthContext();
+    const job = await Job.create({ userId: owner.user._id, name: 'Owner job', address: '1 Main St' });
+
+    const listRes = await request(app)
+      .get('/api/jobs')
+      .set('Authorization', other.authHeader);
+    expect(listRes.status).toBe(200);
+    expect(listRes.body).toHaveLength(0);
+
+    const updateRes = await request(app)
+      .put(`/api/jobs/${job._id}`)
+      .set('Authorization', other.authHeader)
+      .send({ notes: 'changed' });
+    expect(updateRes.status).toBe(404);
+
+    const deleteRes = await request(app)
+      .delete(`/api/jobs/${job._id}`)
+      .set('Authorization', other.authHeader);
+    expect(deleteRes.status).toBe(404);
   });
 });
 
@@ -497,9 +592,12 @@ describe('Property 8: PDF produces non-empty URL for any valid job', () => {
         }),
         async (payload) => {
           await Job.deleteMany({});
-          const job = await Job.create(payload);
+          const auth = await createAuthContext();
+          const job = await Job.create({ ...payload, userId: auth.user._id });
 
-          const res = await request(app).post(`/api/jobs/${job._id}/pdf`);
+          const res = await request(app)
+            .post(`/api/jobs/${job._id}/pdf`)
+            .set('Authorization', auth.authHeader);
           expect(res.status).toBe(200);
           expect(typeof res.body.url).toBe('string');
           expect(res.body.url.length).toBeGreaterThan(0);

@@ -18,6 +18,7 @@ import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import { API_URL } from '../config';
+import { getAuthConfig, useAuth } from '../AuthContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import { formatLoggedDuration } from '../utils/time';
 
@@ -35,6 +36,7 @@ const formatDateLabel = (value, fallback = 'Not set') => {
 
 export default function JobDetail({ route, navigation }) {
   const { job } = route.params;
+  const { token } = useAuth();
 
   const [name, setName] = useState(job.name || '');
   const [address, setAddress] = useState(job.address || '');
@@ -86,16 +88,20 @@ export default function JobDetail({ route, navigation }) {
     }
 
     try {
-      await axios.put(`${API_URL}/jobs/${job._id}`, {
-        name: name.trim(),
-        address: address.trim(),
-        notes,
-        status,
-        photos,
-        startDate: startDate ? startDate.toISOString() : null,
-        endDate: resolvedEndDate ? resolvedEndDate.toISOString() : null,
-        reminder: reminder ? reminder.toISOString() : null,
-      });
+      await axios.put(
+        `${API_URL}/jobs/${job._id}`,
+        {
+          name: name.trim(),
+          address: address.trim(),
+          notes,
+          status,
+          photos,
+          startDate: startDate ? startDate.toISOString() : null,
+          endDate: resolvedEndDate ? resolvedEndDate.toISOString() : null,
+          reminder: reminder ? reminder.toISOString() : null,
+        },
+        getAuthConfig(token)
+      );
 
       if (resolvedEndDate && !endDate) {
         setEndDate(resolvedEndDate);
@@ -201,7 +207,7 @@ export default function JobDetail({ route, navigation }) {
 
   const generatePDF = async () => {
     try {
-      const res = await axios.post(`${API_URL}/jobs/${job._id}/pdf`);
+      const res = await axios.post(`${API_URL}/jobs/${job._id}/pdf`, null, getAuthConfig(token));
       const url = res.data?.url;
       if (url) {
         try {
