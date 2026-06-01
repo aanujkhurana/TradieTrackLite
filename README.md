@@ -168,6 +168,7 @@ Base URL: `/api`
   "name": "Fix kitchen tap",
   "customerName": "Sarah Williams",
   "customerPhone": "0400 123 456",
+  "customerEmail": "sarah@example.com",
   "address": "12 Main St",
   "notes": "Leaking under sink",
   "status": "pending",

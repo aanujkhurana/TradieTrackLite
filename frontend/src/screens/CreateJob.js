@@ -18,6 +18,7 @@ export default function CreateJob({ navigation }) {
   const [name, setName] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [nameError, setNameError] = useState('');
@@ -46,6 +47,7 @@ export default function CreateJob({ navigation }) {
           name: name.trim(),
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
+          customerEmail: customerEmail.trim(),
           address: address.trim(),
           notes,
         },
@@ -97,6 +99,17 @@ export default function CreateJob({ navigation }) {
           onChangeText={setCustomerPhone}
           placeholder="e.g. 0400 123 456"
           keyboardType="phone-pad"
+          returnKeyType="next"
+        />
+
+        <Text style={styles.label}>Customer Email</Text>
+        <TextInput
+          style={styles.input}
+          value={customerEmail}
+          onChangeText={setCustomerEmail}
+          placeholder="e.g. sarah@example.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
           returnKeyType="next"
         />
 

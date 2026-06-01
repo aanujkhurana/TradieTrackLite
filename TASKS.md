@@ -30,7 +30,7 @@ This backlog turns TradieTrack Lite from an MVP into a production-ready and genu
 
 - [x] Separate job title from customer name.
 - [x] Add customer phone number.
-- [ ] Add customer email.
+- [x] Add customer email.
 - [ ] Add optional customer notes.
 - [ ] Add tap-to-call support in the mobile app.
 - [ ] Add tap-to-message or tap-to-email support.

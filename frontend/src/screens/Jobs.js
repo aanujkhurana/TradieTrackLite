@@ -129,6 +129,11 @@ export default function Jobs({ navigation }) {
                 {item.customerPhone}
               </Text>
             ) : null}
+            {item.customerEmail ? (
+              <Text style={styles.customerEmail} numberOfLines={1}>
+                {item.customerEmail}
+              </Text>
+            ) : null}
             <Text style={styles.jobAddress} numberOfLines={1}>
               {item.address || 'No address'}
             </Text>
@@ -297,6 +302,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   customerPhone: {
+    color: '#4b5563',
+    fontSize: 13,
+  },
+  customerEmail: {
     color: '#4b5563',
     fontSize: 13,
   },

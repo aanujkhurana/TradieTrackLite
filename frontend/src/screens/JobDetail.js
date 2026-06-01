@@ -41,6 +41,7 @@ export default function JobDetail({ route, navigation }) {
   const [name, setName] = useState(job.name || '');
   const [customerName, setCustomerName] = useState(job.customerName || '');
   const [customerPhone, setCustomerPhone] = useState(job.customerPhone || '');
+  const [customerEmail, setCustomerEmail] = useState(job.customerEmail || '');
   const [address, setAddress] = useState(job.address || '');
   const [notes, setNotes] = useState(job.notes || '');
   const [status, setStatus] = useState(job.status || 'pending');
@@ -96,6 +97,7 @@ export default function JobDetail({ route, navigation }) {
           name: name.trim(),
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
+          customerEmail: customerEmail.trim(),
           address: address.trim(),
           notes,
           status,
@@ -268,6 +270,16 @@ export default function JobDetail({ route, navigation }) {
           onChangeText={setCustomerPhone}
           placeholder="Customer phone"
           keyboardType="phone-pad"
+        />
+
+        <Text style={styles.label}>Customer Email</Text>
+        <TextInput
+          style={styles.input}
+          value={customerEmail}
+          onChangeText={setCustomerEmail}
+          placeholder="Customer email"
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
 
         <Text style={styles.label}>Address</Text>
