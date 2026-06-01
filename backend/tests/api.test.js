@@ -472,6 +472,7 @@ describe('Unit tests: CRUD routes', () => {
         customerName: 'Sarah Williams',
         customerPhone: '0400 123 456',
         customerEmail: 'Sarah@Example.COM',
+        customerNotes: 'Prefers afternoon appointments',
         address: '42 Plumber St',
         notes: 'Leaking badly',
       });
@@ -482,6 +483,7 @@ describe('Unit tests: CRUD routes', () => {
     expect(res.body.customerName).toBe('Sarah Williams');
     expect(res.body.customerPhone).toBe('0400 123 456');
     expect(res.body.customerEmail).toBe('sarah@example.com');
+    expect(res.body.customerNotes).toBe('Prefers afternoon appointments');
     expect(res.body.address).toBe('42 Plumber St');
   });
 
@@ -588,6 +590,7 @@ describe('Unit tests: CRUD routes', () => {
       customerName: 'Old Customer',
       customerPhone: '0400 111 222',
       customerEmail: 'old@example.com',
+      customerNotes: 'Old notes',
       address: '42 Plumber St',
     });
 
@@ -599,6 +602,7 @@ describe('Unit tests: CRUD routes', () => {
         customerName: 'New Customer',
         customerPhone: '0400 333 444',
         customerEmail: 'NEW@Example.COM',
+        customerNotes: 'New notes',
       });
 
     expect(res.status).toBe(200);
@@ -606,6 +610,7 @@ describe('Unit tests: CRUD routes', () => {
     expect(res.body.customerName).toBe('New Customer');
     expect(res.body.customerPhone).toBe('0400 333 444');
     expect(res.body.customerEmail).toBe('new@example.com');
+    expect(res.body.customerNotes).toBe('New notes');
   });
 
   test('users cannot access jobs owned by another user', async () => {
@@ -693,6 +698,7 @@ describe('Property 8: PDF produces non-empty URL for any valid job', () => {
       customerName: '<b>Customer</b>',
       customerPhone: '<img src=x>',
       customerEmail: '<email@example.com>',
+      customerNotes: '<marquee>hello</marquee>',
       address: '1 <Main> & Co',
       notes: 'Use "quotes" and \'apostrophes\'',
       photos: ['javascript:alert(1)', 'https://example.com/photo.jpg?x=<bad>'],
@@ -708,6 +714,7 @@ describe('Property 8: PDF produces non-empty URL for any valid job', () => {
     expect(html).toContain('&lt;b&gt;Customer&lt;/b&gt;');
     expect(html).toContain('&lt;img src=x&gt;');
     expect(html).toContain('&lt;email@example.com&gt;');
+    expect(html).toContain('&lt;marquee&gt;hello&lt;/marquee&gt;');
     expect(html).toContain('1 &lt;Main&gt; &amp; Co');
     expect(html).toContain('Use &quot;quotes&quot; and &#39;apostrophes&#39;');
     expect(html).not.toContain('javascript:alert(1)');

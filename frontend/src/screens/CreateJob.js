@@ -19,6 +19,7 @@ export default function CreateJob({ navigation }) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  const [customerNotes, setCustomerNotes] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [nameError, setNameError] = useState('');
@@ -48,6 +49,7 @@ export default function CreateJob({ navigation }) {
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
           customerEmail: customerEmail.trim(),
+          customerNotes,
           address: address.trim(),
           notes,
         },
@@ -113,6 +115,16 @@ export default function CreateJob({ navigation }) {
           returnKeyType="next"
         />
 
+        <Text style={styles.label}>Customer Notes</Text>
+        <TextInput
+          style={[styles.input, styles.notesInput]}
+          value={customerNotes}
+          onChangeText={setCustomerNotes}
+          placeholder="Optional customer-specific notes..."
+          multiline
+          numberOfLines={3}
+        />
+
         <Text style={styles.label}>Address *</Text>
         <TextInput
           style={[styles.input, addressError ? styles.inputError : null]}
@@ -123,7 +135,7 @@ export default function CreateJob({ navigation }) {
         />
         {addressError ? <Text style={styles.error}>{addressError}</Text> : null}
 
-        <Text style={styles.label}>Notes</Text>
+        <Text style={styles.label}>Job Notes</Text>
         <TextInput
           style={[styles.input, styles.notesInput]}
           value={notes}

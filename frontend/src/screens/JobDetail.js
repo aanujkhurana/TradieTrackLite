@@ -42,6 +42,7 @@ export default function JobDetail({ route, navigation }) {
   const [customerName, setCustomerName] = useState(job.customerName || '');
   const [customerPhone, setCustomerPhone] = useState(job.customerPhone || '');
   const [customerEmail, setCustomerEmail] = useState(job.customerEmail || '');
+  const [customerNotes, setCustomerNotes] = useState(job.customerNotes || '');
   const [address, setAddress] = useState(job.address || '');
   const [notes, setNotes] = useState(job.notes || '');
   const [status, setStatus] = useState(job.status || 'pending');
@@ -98,6 +99,7 @@ export default function JobDetail({ route, navigation }) {
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
           customerEmail: customerEmail.trim(),
+          customerNotes,
           address: address.trim(),
           notes,
           status,
@@ -282,6 +284,16 @@ export default function JobDetail({ route, navigation }) {
           autoCapitalize="none"
         />
 
+        <Text style={styles.label}>Customer Notes</Text>
+        <TextInput
+          style={[styles.input, styles.notesInput]}
+          value={customerNotes}
+          onChangeText={setCustomerNotes}
+          placeholder="Customer notes..."
+          multiline
+          numberOfLines={3}
+        />
+
         <Text style={styles.label}>Address</Text>
         <TextInput
           style={styles.input}
@@ -290,7 +302,7 @@ export default function JobDetail({ route, navigation }) {
           placeholder="Job address"
         />
 
-        <Text style={styles.label}>Notes</Text>
+        <Text style={styles.label}>Job Notes</Text>
         <TextInput
           style={[styles.input, styles.notesInput]}
           value={notes}

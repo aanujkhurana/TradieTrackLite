@@ -169,6 +169,7 @@ Base URL: `/api`
   "customerName": "Sarah Williams",
   "customerPhone": "0400 123 456",
   "customerEmail": "sarah@example.com",
+  "customerNotes": "Prefers afternoon appointments",
   "address": "12 Main St",
   "notes": "Leaking under sink",
   "status": "pending",

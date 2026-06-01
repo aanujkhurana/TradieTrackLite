@@ -361,6 +361,7 @@ app.post('/api/jobs/:id/pdf', asyncHandler(authenticate), validateJobId, asyncHa
     const safeCustomerName = escapeHtml(job.customerName || '—');
     const safeCustomerPhone = escapeHtml(job.customerPhone || '—');
     const safeCustomerEmail = escapeHtml(job.customerEmail || '—');
+    const safeCustomerNotes = escapeHtml(job.customerNotes || '—');
     const safeAddress = escapeHtml(job.address || '—');
     const safeStatus = escapeHtml(job.status);
     const safeNotes = escapeHtml(job.notes || '—');
@@ -413,6 +414,11 @@ app.post('/api/jobs/:id/pdf', asyncHandler(authenticate), validateJobId, asyncHa
   <div class="section">
     <div class="label">Customer Email</div>
     <div class="value">${safeCustomerEmail}</div>
+  </div>
+
+  <div class="section">
+    <div class="label">Customer Notes</div>
+    <div class="value">${safeCustomerNotes}</div>
   </div>
 
   <div class="section">

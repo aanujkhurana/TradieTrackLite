@@ -7,6 +7,7 @@ const JobSchema = new mongoose.Schema({
   customerName: { type: String, trim: true, default: '' },
   customerPhone: { type: String, trim: true, default: '' },
   customerEmail: { type: String, trim: true, lowercase: true, default: '' },
+  customerNotes: { type: String, default: '' },
   address: { type: String, required: true, trim: true, minlength: 1 },
   notes: String,
   status: { type: String, enum: ['pending', 'in_progress', 'completed'], default: 'pending' },
