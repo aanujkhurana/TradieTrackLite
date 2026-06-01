@@ -13,6 +13,8 @@ const CORS_ORIGINS = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map(origin => origin.trim())
   .filter(Boolean);
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
+const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 1000);
 const AUTH_TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || (process.env.NODE_ENV === 'test' ? 'test-secret' : null);
 const AUTH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 const asyncHandler = (handler) => (req, res, next) => {
@@ -36,6 +38,28 @@ app.use(cors({
     return callback(null, CORS_ORIGINS.includes(origin));
   },
 }));
+
+const rateLimitBuckets = new Map();
+function rateLimiter(req, res, next) {
+  const now = Date.now();
+  const key = req.get('x-forwarded-for') || req.ip || req.socket.remoteAddress || 'unknown';
+  const bucket = rateLimitBuckets.get(key);
+
+  if (!bucket || now > bucket.resetAt) {
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return next();
+  }
+
+  bucket.count += 1;
+  if (bucket.count > RATE_LIMIT_MAX_REQUESTS) {
+    res.set('Retry-After', String(Math.ceil((bucket.resetAt - now) / 1000)));
+    return sendError(res, 429, 'RATE_LIMITED', 'Too many requests');
+  }
+
+  return next();
+}
+
+app.use(rateLimiter);
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(requestLogger);

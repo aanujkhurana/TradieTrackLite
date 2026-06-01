@@ -13,6 +13,8 @@ jest.setTimeout(60000);
 process.env.NODE_ENV = 'test';
 process.env.AUTH_TOKEN_SECRET = 'test-secret';
 process.env.CORS_ORIGINS = 'http://allowed.example.com';
+process.env.RATE_LIMIT_WINDOW_MS = '900000';
+process.env.RATE_LIMIT_MAX_REQUESTS = '1000';
 const app = require('../index');
 const Job = require('../models/Job');
 const User = require('../models/User');
@@ -124,6 +126,21 @@ describe('CORS', () => {
       .set('Origin', 'http://blocked.example.com');
     expect(blockedRes.status).toBe(200);
     expect(blockedRes.headers['access-control-allow-origin']).toBeUndefined();
+  });
+});
+
+describe('Rate limiting', () => {
+  test('returns 429 after too many requests from the same client', async () => {
+    let res;
+    for (let i = 0; i <= 1000; i += 1) {
+      res = await request(app)
+        .get('/api/health')
+        .set('X-Forwarded-For', 'rate-limit-test-client');
+    }
+
+    expect(res.status).toBe(429);
+    expect(res.body.error.code).toBe('RATE_LIMITED');
+    expect(res.headers['retry-after']).toBeDefined();
   });
 });
 
