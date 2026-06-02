@@ -6,21 +6,24 @@ import {
   TouchableOpacity,
   Alert,
   StyleSheet,
+  TextInput,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { deleteJob, listJobs } from '../data/jobs';
 import { cleanupStoredJobPhotos } from '../data/photos';
+import {
+  STATUS_FILTERS,
+  STATUS_META,
+  filterJobsByWorkflow,
+  isReminderOverdue,
+} from '../utils/jobWorkflow';
 import { formatLoggedDuration } from '../utils/time';
-
-const STATUS_META = {
-  pending: { label: 'Pending', color: '#7D8597' },
-  in_progress: { label: 'In Progress', color: '#2196F3' },
-  completed: { label: 'Completed', color: '#4CAF50' },
-};
 
 export default function Jobs({ navigation }) {
   const [jobs, setJobs] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -69,11 +72,17 @@ export default function Jobs({ navigation }) {
         acc.total += 1;
         if (job.status === 'completed') acc.completed += 1;
         if (job.status === 'in_progress') acc.inProgress += 1;
+        if (isReminderOverdue(job)) acc.overdue += 1;
         return acc;
       },
-      { total: 0, completed: 0, inProgress: 0 }
+      { total: 0, completed: 0, inProgress: 0, overdue: 0 }
     );
   }, [jobs]);
+
+  const visibleJobs = useMemo(
+    () => filterJobsByWorkflow(jobs, statusFilter, searchTerm),
+    [jobs, searchTerm, statusFilter]
+  );
 
   const renderSummary = () => (
     <View style={styles.summaryCard}>
@@ -91,6 +100,48 @@ export default function Jobs({ navigation }) {
           <Text style={styles.summaryChipLabel}>Completed</Text>
           <Text style={styles.summaryChipValue}>{stats.completed}</Text>
         </View>
+        <View style={[styles.summaryChip, stats.overdue > 0 && styles.summaryChipWarning]}>
+          <Text style={[styles.summaryChipLabel, stats.overdue > 0 && styles.summaryChipWarningLabel]}>
+            Overdue
+          </Text>
+          <Text style={[styles.summaryChipValue, stats.overdue > 0 && styles.summaryChipWarningValue]}>
+            {stats.overdue}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderFilters = () => (
+    <View style={styles.filtersCard}>
+      <TextInput
+        style={styles.searchInput}
+        value={searchTerm}
+        onChangeText={setSearchTerm}
+        placeholder="Search title, customer, address, or notes"
+        returnKeyType="search"
+      />
+      <View style={styles.filterRow}>
+        {STATUS_FILTERS.map((filter) => {
+          const active = statusFilter === filter.key;
+          const color = STATUS_META[filter.key]?.color || '#1565C0';
+          return (
+            <TouchableOpacity
+              key={filter.key}
+              style={[
+                styles.filterBtn,
+                { borderColor: color },
+                active && { backgroundColor: color },
+              ]}
+              onPress={() => setStatusFilter(filter.key)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.filterBtnText, active && styles.filterBtnTextActive]}>
+                {filter.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
@@ -99,6 +150,7 @@ export default function Jobs({ navigation }) {
     const statusMeta = STATUS_META[item.status] || STATUS_META.pending;
     const isCompleted = item.status === 'completed';
     const loggedTime = formatLoggedDuration(item.startDate || item.createdAt, item.endDate);
+    const reminderOverdue = isReminderOverdue(item);
 
     return (
       <TouchableOpacity
@@ -131,6 +183,11 @@ export default function Jobs({ navigation }) {
           <View style={[styles.badge, { backgroundColor: statusMeta.color }]}>
             <Text style={styles.badgeText}>{statusMeta.label}</Text>
           </View>
+          {reminderOverdue ? (
+            <View style={styles.overdueBadge}>
+              <Text style={styles.overdueBadgeText}>Reminder Overdue</Text>
+            </View>
+          ) : null}
         </View>
         {isCompleted ? (
           <View style={styles.timeLoggedBox}>
@@ -163,15 +220,24 @@ export default function Jobs({ navigation }) {
       </View>
 
       <FlatList
-        data={jobs}
+        data={visibleJobs}
         keyExtractor={(item) => item._id}
         renderItem={renderItem}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        ListHeaderComponent={renderSummary}
+        ListHeaderComponent={
+          <>
+            {renderSummary()}
+            {renderFilters()}
+          </>
+        }
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <Text style={styles.empty}>No jobs yet. Tap "+ Add New Job" to get started.</Text>
+          <Text style={styles.empty}>
+            {jobs.length === 0
+              ? 'No jobs yet. Tap "+ Add New Job" to get started.'
+              : 'No jobs match this filter.'}
+          </Text>
         }
       />
     </View>
@@ -226,9 +292,11 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: 'row',
     gap: 8,
+    flexWrap: 'wrap',
   },
   summaryChip: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '22%',
     backgroundColor: '#f6f8fb',
     borderRadius: 8,
     paddingVertical: 8,
@@ -244,6 +312,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     fontWeight: '700',
+  },
+  summaryChipWarning: {
+    backgroundColor: '#fff3e0',
+  },
+  summaryChipWarningLabel: {
+    color: '#b45309',
+  },
+  summaryChipWarningValue: {
+    color: '#92400e',
+  },
+  filtersCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e4e9f0',
+  },
+  searchInput: {
+    backgroundColor: '#fbfcff',
+    borderWidth: 1,
+    borderColor: '#d9e0e8',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 15,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  filterBtn: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterBtnText: {
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  filterBtnTextActive: {
+    color: '#fff',
   },
   row: {
     flexDirection: 'row',
@@ -296,6 +413,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+  },
+  overdueBadge: {
+    backgroundColor: '#fff3e0',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+  },
+  overdueBadgeText: {
+    color: '#92400e',
+    fontSize: 12,
+    fontWeight: '700',
   },
   deleteBtn: {
     width: 40,

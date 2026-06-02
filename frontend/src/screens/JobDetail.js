@@ -23,13 +23,8 @@ import {
   removePhotoUriAtIndex,
   storeJobPhoto,
 } from '../data/photos';
+import { STATUS_OPTIONS, getReminderState } from '../utils/jobWorkflow';
 import { formatLoggedDuration } from '../utils/time';
-
-const STATUS_OPTIONS = [
-  { key: 'pending', label: 'Pending', color: '#888' },
-  { key: 'in_progress', label: 'In Progress', color: '#2196F3' },
-  { key: 'completed', label: 'Completed', color: '#4CAF50' },
-];
 
 const PHOTO_SIZE = Math.floor((Dimensions.get('window').width - 32 - 8) / 3);
 const formatDateLabel = (value, fallback = 'Not set') => {
@@ -57,10 +52,17 @@ export default function JobDetail({ route, navigation }) {
   const [reminder, setReminder] = useState(
     job.reminder ? new Date(job.reminder) : null
   );
+  const [reminderNotificationId, setReminderNotificationId] = useState(
+    job.reminderNotificationId || null
+  );
   const [activePicker, setActivePicker] = useState(null); // startDate | endDate | reminder
   const totalLoggedTime = useMemo(
     () => formatLoggedDuration(startDate, endDate),
     [startDate, endDate]
+  );
+  const reminderState = useMemo(
+    () => getReminderState({ status, reminder }),
+    [reminder, status]
   );
 
 
@@ -119,6 +121,9 @@ export default function JobDetail({ route, navigation }) {
     }
 
     try {
+      const nextReminderIso = reminder ? reminder.toISOString() : null;
+      const nextReminderNotificationId = await prepareReminderNotification(nextReminderIso);
+
       await updateJob(job._id, {
         name: name.trim(),
         customerName: customerName.trim(),
@@ -131,16 +136,15 @@ export default function JobDetail({ route, navigation }) {
         photos,
         startDate: startDate ? startDate.toISOString() : null,
         endDate: resolvedEndDate ? resolvedEndDate.toISOString() : null,
-        reminder: reminder ? reminder.toISOString() : null,
+        reminder: nextReminderIso,
+        reminderNotificationId: nextReminderNotificationId,
       });
 
       if (resolvedEndDate && !endDate) {
         setEndDate(resolvedEndDate);
       }
 
-      if (reminder) {
-        await scheduleReminder(reminder);
-      }
+      setReminderNotificationId(nextReminderNotificationId);
 
       navigation.goBack();
     } catch (err) {
@@ -211,7 +215,21 @@ export default function JobDetail({ route, navigation }) {
 
   // ── Reminder / notifications (9.4) ───────────────────────────────────────
 
+  const cancelReminderNotification = async (notificationId) => {
+    if (!notificationId) return;
+
+    try {
+      await Notifications.cancelScheduledNotificationAsync(notificationId);
+    } catch {
+      // A missing or already-fired notification should not block saving the job.
+    }
+  };
+
   const scheduleReminder = async (date) => {
+    if (!date || date.getTime() <= Date.now()) {
+      return null;
+    }
+
     const { status: permStatus } = await Notifications.requestPermissionsAsync();
     if (permStatus !== 'granted') {
       Alert.alert(
@@ -219,16 +237,42 @@ export default function JobDetail({ route, navigation }) {
         'Reminder saved, but notifications are disabled. Enable them in Settings to receive alerts.',
         [{ text: 'OK' }]
       );
-      return;
+      return null;
     }
 
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'TradieTrack Reminder',
-        body: `Follow up on job: ${name}`,
-      },
-      trigger: date,
-    });
+    try {
+      return await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'TradieTrack Reminder',
+          body: `Follow up on job: ${name.trim() || 'Untitled job'}`,
+        },
+        trigger: date,
+      });
+    } catch {
+      Alert.alert(
+        'Reminder Saved',
+        'Reminder saved, but the notification could not be scheduled on this device.'
+      );
+      return null;
+    }
+  };
+
+  const prepareReminderNotification = async (nextReminderIso) => {
+    const previousReminderIso = job.reminder || null;
+    const previousNotificationId = job.reminderNotificationId || reminderNotificationId;
+    const reminderChanged = previousReminderIso !== nextReminderIso;
+
+    if (!nextReminderIso) {
+      await cancelReminderNotification(previousNotificationId);
+      return null;
+    }
+
+    if (!reminderChanged && previousNotificationId) {
+      return previousNotificationId;
+    }
+
+    await cancelReminderNotification(previousNotificationId);
+    return scheduleReminder(new Date(nextReminderIso));
   };
   const applyPickedDate = (field, pickedDate) => {
     if (!pickedDate) return;
@@ -494,13 +538,26 @@ export default function JobDetail({ route, navigation }) {
 
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Reminder</Text>
+        <View style={[
+          styles.reminderStateBox,
+          reminderState.key === 'overdue' && styles.reminderStateBoxOverdue,
+          reminderState.key === 'scheduled' && styles.reminderStateBoxScheduled,
+        ]}>
+          <Text style={[
+            styles.reminderStateTitle,
+            reminderState.key === 'overdue' && styles.reminderStateTitleOverdue,
+          ]}>
+            {reminderState.detail}
+          </Text>
+          <Text style={styles.reminderStateText}>{reminderState.label}</Text>
+        </View>
         <TouchableOpacity
           style={styles.actionBtn}
           onPress={() => setActivePicker('reminder')}
           activeOpacity={0.8}
         >
           <Text style={styles.actionBtnText}>
-            {reminder ? reminder.toLocaleString() : 'Set Reminder'}
+            {reminder ? 'Change Reminder' : 'Set Reminder'}
           </Text>
         </TouchableOpacity>
 
@@ -647,6 +704,38 @@ const styles = StyleSheet.create({
     color: '#1b5e20',
     fontWeight: '700',
     marginTop: 2,
+  },
+  reminderStateBox: {
+    backgroundColor: '#f6f8fb',
+    borderWidth: 1,
+    borderColor: '#d9e0e8',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  reminderStateBoxScheduled: {
+    backgroundColor: '#eef8f1',
+    borderColor: '#a7d7b5',
+  },
+  reminderStateBoxOverdue: {
+    backgroundColor: '#fff3e0',
+    borderColor: '#f59e0b',
+  },
+  reminderStateTitle: {
+    color: '#4b5563',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 3,
+    textTransform: 'uppercase',
+  },
+  reminderStateTitleOverdue: {
+    color: '#92400e',
+  },
+  reminderStateText: {
+    color: '#1f2937',
+    fontSize: 14,
+    fontWeight: '600',
   },
   photoGrid: {
     marginTop: 8,

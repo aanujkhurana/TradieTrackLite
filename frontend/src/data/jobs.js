@@ -43,6 +43,10 @@ function normalizePhotos(value) {
   return Array.isArray(value) ? value.filter((uri) => typeof uri === 'string') : [];
 }
 
+function normalizeReminderNotificationId(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 function normalizeJobForCreate(input, getNow = nowIso, getId = createId) {
   const timestamp = getNow();
   const status = normalizeStatus(input.status);
@@ -67,6 +71,7 @@ function normalizeJobForCreate(input, getNow = nowIso, getId = createId) {
     startDate,
     endDate,
     reminder: normalizeDate(input.reminder, null),
+    reminderNotificationId: normalizeReminderNotificationId(input.reminderNotificationId),
     createdAt: normalizeDate(input.createdAt, timestamp),
     updatedAt: timestamp,
   };
@@ -96,6 +101,7 @@ function normalizeJobForUpdate(existing, patch, getNow = nowIso) {
     startDate: normalizeDate(merged.startDate, existing.startDate),
     endDate,
     reminder: normalizeDate(merged.reminder, null),
+    reminderNotificationId: normalizeReminderNotificationId(merged.reminderNotificationId),
     updatedAt: timestamp,
   };
 }
@@ -126,6 +132,7 @@ function rowToJob(row) {
     startDate: row.startDate,
     endDate: row.endDate || null,
     reminder: row.reminder || null,
+    reminderNotificationId: row.reminderNotificationId || null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });
@@ -166,10 +173,16 @@ function createSQLiteJobsRepository(db) {
         startDate TEXT NOT NULL,
         endDate TEXT,
         reminder TEXT,
+        reminderNotificationId TEXT,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL
       );
     `);
+    const tableInfo = await execute('PRAGMA table_info(jobs);');
+    const columnNames = rowsToArray(tableInfo.rows).map((row) => row.name);
+    if (!columnNames.includes('reminderNotificationId')) {
+      await execute('ALTER TABLE jobs ADD COLUMN reminderNotificationId TEXT;');
+    }
     await execute('CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);');
     await execute('CREATE INDEX IF NOT EXISTS idx_jobs_reminder ON jobs(reminder);');
     await execute('CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(createdAt DESC);');
@@ -194,8 +207,9 @@ function createSQLiteJobsRepository(db) {
     await execute(
       `INSERT INTO jobs (
         id, name, customerName, customerPhone, customerEmail, customerNotes,
-        address, notes, status, photos, startDate, endDate, reminder, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        address, notes, status, photos, startDate, endDate, reminder,
+        reminderNotificationId, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
       [
         job.id,
         job.name,
@@ -210,6 +224,7 @@ function createSQLiteJobsRepository(db) {
         job.startDate,
         job.endDate,
         job.reminder,
+        job.reminderNotificationId,
         job.createdAt,
         job.updatedAt,
       ]
@@ -241,6 +256,7 @@ function createSQLiteJobsRepository(db) {
         startDate = ?,
         endDate = ?,
         reminder = ?,
+        reminderNotificationId = ?,
         updatedAt = ?
       WHERE id = ?;`,
       [
@@ -256,6 +272,7 @@ function createSQLiteJobsRepository(db) {
         job.startDate,
         job.endDate,
         job.reminder,
+        job.reminderNotificationId,
         job.updatedAt,
         id,
       ]

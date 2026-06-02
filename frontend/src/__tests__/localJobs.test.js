@@ -57,6 +57,27 @@ describe('local job repository', () => {
     expect(updated.endDate).toBe('2026-01-02T00:00:00.000Z');
   });
 
+  it('stores local reminder date and notification id on the job record', async () => {
+    const repo = buildRepository();
+    const job = await repo.create({
+      name: 'Fix tap',
+      address: '1 Test St',
+      reminder: '2026-02-01T09:30:00.000Z',
+      reminderNotificationId: 'notification-1',
+    });
+
+    expect(job.reminder).toBe('2026-02-01T09:30:00.000Z');
+    expect(job.reminderNotificationId).toBe('notification-1');
+
+    const updated = await repo.update(job._id, {
+      reminder: '2026-02-02T10:00:00.000Z',
+      reminderNotificationId: 'notification-2',
+    });
+
+    expect(updated.reminder).toBe('2026-02-02T10:00:00.000Z');
+    expect(updated.reminderNotificationId).toBe('notification-2');
+  });
+
   it('appends and deletes local photo paths on a job record', async () => {
     const repo = buildRepository();
     const job = await repo.create({ name: 'Fix tap', address: '1 Test St' });

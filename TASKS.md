@@ -42,14 +42,14 @@ Backend/auth/cloud work from earlier phases is now considered legacy unless a ta
 
 ## Phase 3: Local Reminders And Job Workflow
 
-- [ ] Keep reminders as local notifications.
-- [ ] Store reminder date/time in the local job record.
-- [ ] Show reminder state clearly on job detail.
-- [ ] Add overdue reminder indicators in the job list.
-- [ ] Add simple status filters for pending, in progress, and completed.
-- [ ] Add search by job title, customer, address, and notes.
-- [ ] Preserve current completed-job behavior: auto-set `endDate` if missing.
-- [ ] Keep time logged calculation local.
+- [x] Keep reminders as local notifications.
+- [x] Store reminder date/time in the local job record.
+- [x] Show reminder state clearly on job detail.
+- [x] Add overdue reminder indicators in the job list.
+- [x] Add simple status filters for pending, in progress, and completed.
+- [x] Add search by job title, customer, address, and notes.
+- [x] Preserve current completed-job behavior: auto-set `endDate` if missing.
+- [x] Keep time logged calculation local.
 
 ## Phase 4: Local Reports And Export
 

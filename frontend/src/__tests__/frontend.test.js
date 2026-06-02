@@ -9,6 +9,7 @@ import { Alert, Linking } from 'react-native';
 import fc from 'fast-check';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
+import * as Notifications from 'expo-notifications';
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before any imports that trigger module resolution
@@ -29,6 +30,7 @@ jest.mock('expo-image-picker', () => ({
 jest.mock('expo-notifications', () => ({
   requestPermissionsAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
+  cancelScheduledNotificationAsync: jest.fn(),
 }));
 jest.mock('expo-file-system', () => ({
   documentDirectory: 'file:///app/Documents/',
@@ -50,6 +52,11 @@ jest.mock('react-native/Libraries/Utilities/Dimensions', () => ({
 
 import { createJob, updateJob } from '../data/jobs';
 import { appendPhotoUri, removePhotoUriAtIndex } from '../data/photos';
+import {
+  filterJobsByWorkflow,
+  getReminderState,
+  isReminderOverdue,
+} from '../utils/jobWorkflow';
 import CreateJob from '../screens/CreateJob';
 import JobDetail from '../screens/JobDetail';
 
@@ -65,7 +72,7 @@ function isValidISODate(str) {
 
 /** Status → colour mapping from Jobs.js */
 const STATUS_COLOURS = {
-  pending: '#888',
+  pending: '#7D8597',
   in_progress: '#2196F3',
   completed: '#4CAF50',
 };
@@ -169,7 +176,7 @@ describe('Property 10: Status badge colour mapping', () => {
   });
 
   it('pending maps to grey (#888)', () => {
-    expect(STATUS_COLOURS['pending']).toBe('#888');
+    expect(STATUS_COLOURS['pending']).toBe('#7D8597');
   });
 
   it('in_progress maps to blue (#2196F3)', () => {
@@ -178,6 +185,68 @@ describe('Property 10: Status badge colour mapping', () => {
 
   it('completed maps to green (#4CAF50)', () => {
     expect(STATUS_COLOURS['completed']).toBe('#4CAF50');
+  });
+});
+
+describe('Local job workflow helpers', () => {
+  const jobs = [
+    {
+      _id: '1',
+      name: 'Fix leaking tap',
+      customerName: 'Sarah',
+      address: '12 Main St',
+      notes: 'Kitchen sink',
+      status: 'pending',
+    },
+    {
+      _id: '2',
+      name: 'Install vanity',
+      customerName: 'Mick',
+      address: '4 River Rd',
+      notes: 'Bathroom',
+      status: 'in_progress',
+    },
+    {
+      _id: '3',
+      name: 'Replace switchboard',
+      customerName: 'Alex',
+      address: '9 Hill St',
+      notes: 'Garage access',
+      status: 'completed',
+    },
+  ];
+
+  it('filters jobs by status locally', () => {
+    expect(filterJobsByWorkflow(jobs, 'in_progress', '').map((job) => job._id))
+      .toEqual(['2']);
+  });
+
+  it('searches title, customer, address, and notes locally', () => {
+    expect(filterJobsByWorkflow(jobs, 'all', 'sarah').map((job) => job._id))
+      .toEqual(['1']);
+    expect(filterJobsByWorkflow(jobs, 'all', 'river').map((job) => job._id))
+      .toEqual(['2']);
+    expect(filterJobsByWorkflow(jobs, 'all', 'garage').map((job) => job._id))
+      .toEqual(['3']);
+  });
+
+  it('marks active past reminders as overdue but ignores completed jobs', () => {
+    const now = new Date('2026-06-02T12:00:00.000Z');
+    const overdueJob = {
+      status: 'pending',
+      reminder: '2026-06-02T11:00:00.000Z',
+    };
+    const completedJob = {
+      status: 'completed',
+      reminder: '2026-06-02T11:00:00.000Z',
+    };
+
+    expect(isReminderOverdue(overdueJob, now)).toBe(true);
+    expect(getReminderState(overdueJob, now)).toEqual(expect.objectContaining({
+      key: 'overdue',
+      isOverdue: true,
+    }));
+    expect(isReminderOverdue(completedJob, now)).toBe(false);
   });
 });
 
@@ -264,6 +333,9 @@ describe('JobDetail screen', () => {
     FileSystem.makeDirectoryAsync.mockResolvedValue(undefined);
     FileSystem.copyAsync.mockResolvedValue(undefined);
     FileSystem.deleteAsync.mockResolvedValue(undefined);
+    Notifications.requestPermissionsAsync.mockResolvedValue({ status: 'granted' });
+    Notifications.scheduleNotificationAsync.mockResolvedValue('notification-1');
+    Notifications.cancelScheduledNotificationAsync.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -358,6 +430,37 @@ describe('JobDetail screen', () => {
     );
 
     expect(getByText('Set Reminder')).toBeTruthy();
+    expect(getByText('No reminder scheduled')).toBeTruthy();
+  });
+
+  it('schedules a local notification and stores reminder state when saved', async () => {
+    updateJob.mockResolvedValueOnce({ ...baseJob });
+    const reminderDate = new Date('2099-02-01T09:30:00.000Z');
+
+    const { getByText, getByTestId } = render(
+      <JobDetail route={{ params: { job: baseJob } }} navigation={mockNavigation} />
+    );
+
+    fireEvent.press(getByText('Set Reminder'));
+    fireEvent(getByTestId('DateTimePicker'), 'onChange', null, reminderDate);
+
+    await act(async () => {
+      fireEvent.press(getByText('Save'));
+    });
+
+    await waitFor(() => {
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(expect.objectContaining({
+        content: expect.objectContaining({
+          title: 'TradieTrack Reminder',
+          body: 'Follow up on job: Fix tap',
+        }),
+        trigger: reminderDate,
+      }));
+      expect(updateJob).toHaveBeenCalledWith('job123', expect.objectContaining({
+        reminder: '2099-02-01T09:30:00.000Z',
+        reminderNotificationId: 'notification-1',
+      }));
+    });
   });
 
   it('call customer button opens tel URL when a phone number is present', () => {
