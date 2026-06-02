@@ -31,14 +31,14 @@ Backend/auth/cloud work from earlier phases is now considered legacy unless a ta
 
 ## Phase 2: Local Photo Storage
 
-- [ ] Keep using the device camera through Expo Image Picker.
-- [ ] Copy captured photos into app-controlled local file storage.
-- [ ] Store local photo file paths on the job record.
-- [ ] Display locally stored photos in job detail.
-- [ ] Add photo delete support.
-- [ ] Remove assumptions about remote photo URLs for the MVP.
-- [ ] Add a simple photo storage cleanup path when a job is deleted.
-- [ ] Add tests for photo URI append/delete behavior.
+- [x] Keep using the device camera through Expo Image Picker.
+- [x] Copy captured photos into app-controlled local file storage.
+- [x] Store local photo file paths on the job record.
+- [x] Display locally stored photos in job detail.
+- [x] Add photo delete support.
+- [x] Remove assumptions about remote photo URLs for the MVP.
+- [x] Add a simple photo storage cleanup path when a job is deleted.
+- [x] Add tests for photo URI append/delete behavior.
 
 ## Phase 3: Local Reminders And Job Workflow
 

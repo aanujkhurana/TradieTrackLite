@@ -5,8 +5,10 @@
 
 import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
-import { Linking } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import fc from 'fast-check';
+import * as FileSystem from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before any imports that trigger module resolution
@@ -28,6 +30,13 @@ jest.mock('expo-notifications', () => ({
   requestPermissionsAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
 }));
+jest.mock('expo-file-system', () => ({
+  documentDirectory: 'file:///app/Documents/',
+  getInfoAsync: jest.fn(),
+  makeDirectoryAsync: jest.fn(),
+  copyAsync: jest.fn(),
+  deleteAsync: jest.fn(),
+}));
 jest.mock('@react-native-community/datetimepicker', () => {
   const React = require('react');
   const { View } = require('react-native');
@@ -39,18 +48,14 @@ jest.mock('react-native/Libraries/Utilities/Dimensions', () => ({
   removeEventListener: jest.fn(),
 }));
 
-import { createJob } from '../data/jobs';
+import { createJob, updateJob } from '../data/jobs';
+import { appendPhotoUri, removePhotoUriAtIndex } from '../data/photos';
 import CreateJob from '../screens/CreateJob';
 import JobDetail from '../screens/JobDetail';
 
 // ---------------------------------------------------------------------------
 // Pure logic helpers (extracted from screen logic for property testing)
 // ---------------------------------------------------------------------------
-
-/** Replicates: setPhotos(prev => [...prev, uri]) */
-function appendPhoto(photos, uri) {
-  return [...photos, uri];
-}
 
 /** Replicates backend/frontend reminder validation logic */
 function isValidISODate(str) {
@@ -82,9 +87,24 @@ describe('Property 6: Photo URI append invariant', () => {
     fc.assert(
       fc.property(fc.array(fc.string()), fc.string(), (photos, uri) => {
         const before = photos.length;
-        const result = appendPhoto(photos, uri);
+        const result = appendPhotoUri(photos, uri);
         expect(result.length).toBe(before + 1);
         expect(result[result.length - 1]).toBe(uri);
+      })
+    );
+  });
+
+  it('removing a photo URI deletes only the requested index', () => {
+    fc.assert(
+      fc.property(fc.array(fc.string(), { minLength: 1 }), fc.nat(), (photos, rawIndex) => {
+        const index = rawIndex % photos.length;
+        const result = removePhotoUriAtIndex(photos, index);
+
+        expect(result.length).toBe(photos.length - 1);
+        expect(result).toEqual([
+          ...photos.slice(0, index),
+          ...photos.slice(index + 1),
+        ]);
       })
     );
   });
@@ -240,6 +260,14 @@ describe('JobDetail screen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    FileSystem.getInfoAsync.mockResolvedValue({ exists: false });
+    FileSystem.makeDirectoryAsync.mockResolvedValue(undefined);
+    FileSystem.copyAsync.mockResolvedValue(undefined);
+    FileSystem.deleteAsync.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('status selector renders 3 buttons (Pending, In Progress, Completed)', () => {
@@ -265,6 +293,63 @@ describe('JobDetail screen', () => {
     // The Photos label and Add Photo button should be present
     expect(getByText('Photos')).toBeTruthy();
     expect(getByText('Add Photo')).toBeTruthy();
+  });
+
+  it('copies a captured photo into local app storage and persists its path', async () => {
+    ImagePicker.requestCameraPermissionsAsync.mockResolvedValueOnce({ status: 'granted' });
+    ImagePicker.launchCameraAsync.mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ uri: 'file:///camera/cache/photo.jpg' }],
+    });
+    updateJob.mockResolvedValueOnce({ ...baseJob });
+
+    const { getByText } = render(
+      <JobDetail route={{ params: { job: baseJob } }} navigation={mockNavigation} />
+    );
+
+    await act(async () => {
+      fireEvent.press(getByText('Add Photo'));
+    });
+
+    await waitFor(() => {
+      expect(FileSystem.makeDirectoryAsync).toHaveBeenCalledWith(
+        'file:///app/Documents/job-photos/',
+        { intermediates: true }
+      );
+      expect(FileSystem.copyAsync).toHaveBeenCalledWith(expect.objectContaining({
+        from: 'file:///camera/cache/photo.jpg',
+        to: expect.stringMatching(/^file:\/\/\/app\/Documents\/job-photos\/job_photo_.*\.jpg$/),
+      }));
+      expect(updateJob).toHaveBeenCalledWith('job123', {
+        photos: [expect.stringMatching(/^file:\/\/\/app\/Documents\/job-photos\/job_photo_.*\.jpg$/)],
+      });
+    });
+  });
+
+  it('deletes a local photo path from the job and app storage', async () => {
+    const localPhotoUri = 'file:///app/Documents/job-photos/photo-1.jpg';
+    FileSystem.getInfoAsync.mockResolvedValue({ exists: true });
+    updateJob.mockResolvedValueOnce({ ...baseJob, photos: [] });
+    jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      const deleteButton = buttons.find((button) => button.text === 'Delete');
+      deleteButton.onPress();
+    });
+
+    const { getByLabelText } = render(
+      <JobDetail
+        route={{ params: { job: { ...baseJob, photos: [localPhotoUri] } } }}
+        navigation={mockNavigation}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(getByLabelText('Delete photo'));
+    });
+
+    await waitFor(() => {
+      expect(updateJob).toHaveBeenCalledWith('job123', { photos: [] });
+      expect(FileSystem.deleteAsync).toHaveBeenCalledWith(localPhotoUri, { idempotent: true });
+    });
   });
 
   it('reminder picker button shows "Set Reminder" when no reminder is set', () => {

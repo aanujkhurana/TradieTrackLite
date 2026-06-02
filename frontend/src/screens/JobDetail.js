@@ -17,6 +17,12 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { updateJob } from '../data/jobs';
+import {
+  appendPhotoUri,
+  deleteStoredJobPhoto,
+  removePhotoUriAtIndex,
+  storeJobPhoto,
+} from '../data/photos';
 import { formatLoggedDuration } from '../utils/time';
 
 const STATUS_OPTIONS = [
@@ -144,27 +150,63 @@ export default function JobDetail({ route, navigation }) {
   // ── Photo capture (9.3) ───────────────────────────────────────────────────
 
   const addPhoto = async () => {
-    const { status: permStatus } = await ImagePicker.requestCameraPermissionsAsync();
-    if (permStatus !== 'granted') {
-      Alert.alert(
-        'Camera Permission Required',
-        'Please enable camera access in your device Settings to add photos.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: false,
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      const uri = result.assets?.[0]?.uri ?? result.uri;
-      if (uri) {
-        setPhotos((prev) => [...prev, uri]);
+    try {
+      const { status: permStatus } = await ImagePicker.requestCameraPermissionsAsync();
+      if (permStatus !== 'granted') {
+        Alert.alert(
+          'Camera Permission Required',
+          'Please enable camera access in your device Settings to add photos.',
+          [{ text: 'OK' }]
+        );
+        return;
       }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        const uri = result.assets?.[0]?.uri ?? result.uri;
+        if (uri) {
+          const localUri = await storeJobPhoto(uri);
+          const nextPhotos = appendPhotoUri(photos, localUri);
+          try {
+            await updateJob(job._id, { photos: nextPhotos });
+            setPhotos(nextPhotos);
+          } catch (err) {
+            await deleteStoredJobPhoto(localUri);
+            throw err;
+          }
+        }
+      }
+    } catch (err) {
+      Alert.alert('Photo Storage Error', 'Photo could not be saved on this device.');
     }
+  };
+
+  const deletePhoto = (uri, index) => {
+    Alert.alert(
+      'Delete Photo',
+      'Remove this photo from the job?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const nextPhotos = removePhotoUriAtIndex(photos, index);
+              await updateJob(job._id, { photos: nextPhotos });
+              await deleteStoredJobPhoto(uri);
+              setPhotos(nextPhotos);
+            } catch (err) {
+              Alert.alert('Photo Storage Error', 'Photo file could not be removed from this device.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // ── Reminder / notifications (9.4) ───────────────────────────────────────
@@ -433,8 +475,18 @@ export default function JobDetail({ route, navigation }) {
             numColumns={3}
             scrollEnabled={false}
             style={styles.photoGrid}
-            renderItem={({ item }) => (
-              <Image source={{ uri: item }} style={styles.photo} />
+            renderItem={({ item, index }) => (
+              <View style={styles.photoTile}>
+                <Image source={{ uri: item }} style={styles.photo} />
+                <TouchableOpacity
+                  style={styles.photoDeleteBtn}
+                  onPress={() => deletePhoto(item, index)}
+                  activeOpacity={0.8}
+                  accessibilityLabel="Delete photo"
+                >
+                  <Text style={styles.photoDeleteText}>x</Text>
+                </TouchableOpacity>
+              </View>
             )}
           />
         )}
@@ -602,8 +654,29 @@ const styles = StyleSheet.create({
   photo: {
     width: PHOTO_SIZE,
     height: PHOTO_SIZE,
-    margin: 2,
     borderRadius: 4,
+  },
+  photoTile: {
+    width: PHOTO_SIZE,
+    height: PHOTO_SIZE,
+    margin: 2,
+  },
+  photoDeleteBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(20, 25, 32, 0.78)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoDeleteText: {
+    color: '#fff',
+    fontSize: 17,
+    lineHeight: 18,
+    fontWeight: '700',
   },
   actionBtn: {
     backgroundColor: '#f3f8ff',

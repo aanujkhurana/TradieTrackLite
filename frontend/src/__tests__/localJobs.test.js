@@ -57,6 +57,30 @@ describe('local job repository', () => {
     expect(updated.endDate).toBe('2026-01-02T00:00:00.000Z');
   });
 
+  it('appends and deletes local photo paths on a job record', async () => {
+    const repo = buildRepository();
+    const job = await repo.create({ name: 'Fix tap', address: '1 Test St' });
+
+    const withPhotos = await repo.update(job._id, {
+      photos: ['file:///app/Documents/job-photos/photo-1.jpg'],
+    });
+    const afterAppend = await repo.update(job._id, {
+      photos: [...withPhotos.photos, 'file:///app/Documents/job-photos/photo-2.jpg'],
+    });
+    const afterDelete = await repo.update(job._id, {
+      photos: afterAppend.photos.filter((photo) => photo !== 'file:///app/Documents/job-photos/photo-1.jpg'),
+    });
+
+    expect(afterAppend.photos).toEqual([
+      'file:///app/Documents/job-photos/photo-1.jpg',
+      'file:///app/Documents/job-photos/photo-2.jpg',
+    ]);
+    expect(afterDelete.photos).toEqual(['file:///app/Documents/job-photos/photo-2.jpg']);
+    await expect(repo.get(job._id)).resolves.toEqual(expect.objectContaining({
+      photos: ['file:///app/Documents/job-photos/photo-2.jpg'],
+    }));
+  });
+
   it('deletes local jobs', async () => {
     const repo = buildRepository();
     const job = await repo.create({ name: 'Fix tap', address: '1 Test St' });

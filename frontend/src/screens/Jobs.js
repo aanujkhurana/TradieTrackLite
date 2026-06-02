@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { deleteJob, listJobs } from '../data/jobs';
+import { cleanupStoredJobPhotos } from '../data/photos';
 import { formatLoggedDuration } from '../utils/time';
 
 const STATUS_META = {
@@ -52,6 +53,7 @@ export default function Jobs({ navigation }) {
           onPress: async () => {
             try {
               await deleteJob(job._id);
+              await cleanupStoredJobPhotos(job.photos);
               setJobs((prev) => prev.filter((j) => j._id !== job._id));
             } catch (err) {
               Alert.alert('Local Storage Error', 'Job could not be deleted from this device.');
