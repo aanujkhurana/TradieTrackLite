@@ -2,41 +2,65 @@
 
 Guidance for coding agents working on TradieTrack Lite.
 
-## App Summary
+## Current Product Direction
 
-TradieTrack Lite is a React Native and Express app for tradespeople to track jobs, photos, reminders, job status, logged time, and PDF reports. The intended product is simple, fast, and mobile-first.
+TradieTrack Lite should be a simple, local-first mobile job tracker for tradies.
+
+The intended MVP is:
+
+- No authentication.
+- No required backend.
+- No cloud storage.
+- Jobs stored on the mobile device.
+- Photos stored in app/device storage.
+- Local reminders.
+- Local export/share for reports.
+- Free with ads.
+- One-time purchase to remove ads.
+
+Do not add cloud sync, user accounts, subscriptions, teams, or backend storage unless the user explicitly changes the product direction again.
+
+## Important Context
+
+The repository currently contains backend/auth work from an earlier production-readiness direction. That work is now legacy for the MVP. Treat it as something to remove, bypass, or quarantine when implementing the local-first app.
+
+The active roadmap is [TASKS.md](/Users/Aanuj/softwares/TradieTrackLite/TASKS.md). Follow that file over older notes, previous commits, or `App_Readme.md`.
 
 ## Repository Layout
 
-- `frontend/`: Expo React Native app.
-- `frontend/App.js`: Stack navigation setup.
-- `frontend/src/screens/Jobs.js`: Job list, summary counts, delete flow.
-- `frontend/src/screens/CreateJob.js`: New job form and validation.
-- `frontend/src/screens/JobDetail.js`: Edit job, status, photos, reminders, time logging, PDF action.
-- `frontend/src/config.js`: API URL configuration.
+- `frontend/`: Expo React Native app and current primary product surface.
+- `frontend/App.js`: App shell and navigation.
+- `frontend/src/screens/Jobs.js`: Job list.
+- `frontend/src/screens/CreateJob.js`: New job form.
+- `frontend/src/screens/JobDetail.js`: Edit job, status, photos, reminders, contact actions, time logging.
 - `frontend/src/utils/time.js`: Date parsing and logged-time formatting helpers.
-- `backend/`: Express and MongoDB API.
-- `backend/index.js`: API routes, validation, Mongo connection, PDF generation.
-- `backend/models/Job.js`: Mongoose schema.
-- `backend/tests/api.test.js`: Backend route and property tests.
-- `App_Readme.md`: Original product/build specification.
+- `backend/`: Legacy Express/MongoDB API from earlier backend-first direction.
+- `backend/tests/api.test.js`: Legacy backend tests.
+- `TASKS.md`: Current local-first roadmap.
+- `README.md`: Current product and setup documentation.
+
+## Development Priorities
+
+When implementing new work:
+
+- Prefer frontend/mobile local storage over backend APIs.
+- Prefer SQLite or another durable local database for job records.
+- Prefer app-controlled local file storage for photos.
+- Preserve job-site usability: large touch targets, minimal steps, clear labels.
+- Keep the app useful without internet access.
+- Make data ownership obvious: records stay on the user's device unless exported.
+- Keep monetization simple: ads for free users, one-time ad-free purchase.
+
+## What To Avoid
+
+- Do not add login screens for the MVP.
+- Do not require `API_URL` for normal job workflows.
+- Do not store job photos in Supabase, S3, or another cloud provider for the MVP.
+- Do not introduce subscriptions unless recurring cloud features are explicitly added.
+- Do not build team/multi-user features.
+- Do not make broad backend changes unless they support removing backend dependency or maintaining legacy tests.
 
 ## Run Commands
-
-Backend:
-
-```sh
-cd backend
-cp .env.example .env
-npm install
-npm run dev
-```
-
-If `nodemon` fails because of local watcher limits, use:
-
-```sh
-node index.js
-```
 
 Frontend:
 
@@ -46,16 +70,15 @@ npm install
 npm start
 ```
 
-For device testing, set `EXPO_PUBLIC_API_URL` to a reachable backend URL.
-
-## Test Commands
-
-Backend:
+Backend, only for legacy backend work:
 
 ```sh
 cd backend
+npm install
 npm test
 ```
+
+## Test Commands
 
 Frontend:
 
@@ -64,22 +87,19 @@ cd frontend
 npm test
 ```
 
+Backend, only when touching backend code:
+
+```sh
+cd backend
+npm test
+```
+
 ## Implementation Notes
 
-- Keep the app practical and job-site friendly: large touch targets, minimal steps, and clear error handling.
-- Preserve the status enum values: `pending`, `in_progress`, `completed`.
-- Keep backend validation aligned with the frontend forms.
-- Do not mutate `createdAt` during job updates.
-- When setting a job to `completed`, preserve the current behavior that auto-populates `endDate` if missing.
-- Date fields should be valid date strings when sent to the backend.
-- Avoid adding authentication, invoicing, payments, teams, or analytics unless explicitly requested; those are future features in the product spec.
-- Do not introduce broad rewrites unless needed. This is a small MVP and benefits from straightforward code.
-
-## Local Verification Notes
-
-This repo was verified locally with:
-
-- Backend running on `http://localhost:4000`.
-- Expo Metro running on `exp://127.0.0.1:8081`.
-
-The system Node `v26` caused dependency/runtime issues during verification. Prefer an LTS Node release or the bundled workspace Node runtime if available.
+- Preserve status enum values: `pending`, `in_progress`, `completed`.
+- Preserve completed-job behavior: if a job is marked completed and `endDate` is missing, auto-set `endDate`.
+- Keep customer details separate from job title.
+- Keep reminders local.
+- Keep photos local.
+- Before removing legacy backend/auth code, first ensure the frontend has working local replacements.
+- Commit and push each coherent checkpoint if the user has asked to maintain that workflow.

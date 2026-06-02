@@ -1,122 +1,125 @@
-# Production Readiness Tasks
+# TradieTrack Lite Tasks
 
-This backlog turns TradieTrack Lite from an MVP into a production-ready and genuinely useful field app. Tasks are grouped roughly in recommended build order.
+This backlog reflects the current product direction: a simple, no-auth, local-first mobile app for tradies. The app should be free with ads and offer a one-time purchase to remove ads.
 
-## Phase 1: Foundation
+Backend/auth/cloud work from earlier phases is now considered legacy unless a task explicitly says to preserve it.
 
-- [x] Add `.nvmrc` with a stable Node LTS version.
-- [x] Update setup docs with exact supported Node and npm versions.
-- [x] Make the backend read `PORT` from `process.env.PORT`.
-- [x] Add a startup check that fails clearly when `MONGO_URI` is missing.
-- [x] Add `GET /api/health` for deployment and uptime checks.
-- [x] Add global Express error-handling middleware.
-- [x] Return consistent API error responses, for example `{ "error": { "code": "...", "message": "..." } }`.
-- [x] Validate Mongo ObjectIds before `findById`, `findByIdAndUpdate`, and `findByIdAndDelete`.
-- [x] Add request logging for method, path, status, and latency.
+## Phase 0: Product Direction Reset
 
-## Phase 2: Security And Accounts
+- [x] Decide on local-first, no-auth product direction.
+- [x] Decide against Supabase/cloud photo storage for the MVP.
+- [x] Decide on free-with-ads monetization.
+- [x] Decide on one-time purchase for ad-free experience.
+- [x] Update `README.md` for the local-first direction.
+- [x] Update `AGENTS.md` for the local-first direction.
+- [x] Rewrite `TASKS.md` around local storage, ads, and one-time purchase.
 
-- [x] Add user authentication.
-- [x] Add a `User` model.
-- [x] Add job ownership with `userId` on every job.
-- [x] Ensure users can only list, edit, delete, and export their own jobs.
-- [x] Add protected route middleware.
-- [x] Restrict CORS to known frontend origins.
-- [x] Add API rate limiting.
-- [x] Sanitize values interpolated into PDF HTML.
-- [x] Move secrets and environment-specific values out of code.
+## Phase 1: Remove Backend Dependency From Normal App Use
 
-## Phase 3: Job Model Improvements
+- [ ] Add a local data access layer in the frontend.
+- [ ] Choose and install a local database library, preferably SQLite.
+- [ ] Create a local job schema for job title, customer details, address, notes, status, dates, reminders, and photos.
+- [ ] Add local CRUD helpers for jobs.
+- [ ] Replace `Jobs` screen API loading with local database loading.
+- [ ] Replace `CreateJob` API submission with local database insert.
+- [ ] Replace `JobDetail` API update with local database update.
+- [ ] Replace delete API calls with local database delete.
+- [ ] Remove login/register from the normal app launch flow.
+- [ ] Remove bearer-token requirements from frontend job flows.
+- [ ] Keep backend code only as legacy or remove it after frontend is fully local.
+- [ ] Update tests to cover local job create, list, update, and delete.
 
-- [x] Separate job title from customer name.
-- [x] Add customer phone number.
-- [x] Add customer email.
-- [x] Add optional customer notes.
-- [x] Add tap-to-call support in the mobile app.
-- [x] Add tap-to-message or tap-to-email support.
-- [x] Add Mongoose `{ timestamps: true }`.
-- [x] Add indexes for `userId`, `status`, `reminder`, and `createdAt`.
-- [x] Preserve the current behavior where completing a job auto-sets `endDate` if missing.
+## Phase 2: Local Photo Storage
 
-## Phase 4: Real Photo Storage
-
-- [ ] Choose a storage provider, such as S3 or Supabase Storage.
-- [ ] Add backend upload endpoint or signed upload URL flow.
-- [ ] Store remote image URLs instead of local device URI strings.
-- [ ] Generate and store photo thumbnails.
-- [ ] Add upload progress state in the frontend.
-- [ ] Add upload failure and retry handling.
+- [ ] Keep using the device camera through Expo Image Picker.
+- [ ] Copy captured photos into app-controlled local file storage.
+- [ ] Store local photo file paths on the job record.
+- [ ] Display locally stored photos in job detail.
 - [ ] Add photo delete support.
-- [ ] Include stored photos in exported PDF reports.
+- [ ] Remove assumptions about remote photo URLs for the MVP.
+- [ ] Add a simple photo storage cleanup path when a job is deleted.
+- [ ] Add tests for photo URI append/delete behavior.
 
-## Phase 5: PDF Export
+## Phase 3: Local Reminders And Job Workflow
 
-- [ ] Generate PDF files that can be downloaded or shared from mobile.
-- [ ] Store generated PDFs in cloud storage.
-- [ ] Return a hosted PDF URL instead of a temporary local file path.
-- [ ] Add PDF report fields for customer, address, status, notes, photos, start date, end date, and total logged time.
-- [ ] Add a clear PDF generation loading state.
-- [ ] Add retry handling for PDF failures.
-- [ ] Add backend tests for PDF success, missing job, and generation failure.
+- [ ] Keep reminders as local notifications.
+- [ ] Store reminder date/time in the local job record.
+- [ ] Show reminder state clearly on job detail.
+- [ ] Add overdue reminder indicators in the job list.
+- [ ] Add simple status filters for pending, in progress, and completed.
+- [ ] Add search by job title, customer, address, and notes.
+- [ ] Preserve current completed-job behavior: auto-set `endDate` if missing.
+- [ ] Keep time logged calculation local.
 
-## Phase 6: Search, Filters, And Daily Workflow
+## Phase 4: Local Reports And Export
 
-- [ ] Add job search by title, customer, address, and notes.
-- [ ] Add status filters for pending, in progress, and completed jobs.
-- [ ] Add sorting by newest, status, reminder date, and completed date.
-- [ ] Add overdue reminder indicators.
-- [ ] Add a dedicated reminders view.
-- [ ] Add a job timeline with created, started, completed, edited, and note events.
-- [ ] Add pull-to-refresh and empty/error states for filtered lists.
+- [ ] Replace backend PDF generation with local report generation.
+- [ ] Evaluate Expo Print, Expo Sharing, or a lightweight HTML-to-PDF approach.
+- [ ] Include job title, customer details, address, status, notes, photos, start/end dates, and total logged time in reports.
+- [ ] Share reports through the device share sheet.
+- [ ] Add clear loading and error states for report generation.
+- [ ] Add a manual data export option for backup.
+- [ ] Add a manual data import option only if it stays simple and reliable.
 
-## Phase 7: Offline Support
+## Phase 5: Ads And One-Time Ad-Free Purchase
 
-- [ ] Add local persistence for jobs on device.
-- [ ] Cache recently loaded jobs for offline viewing.
-- [ ] Allow creating and editing jobs while offline.
-- [ ] Track unsynced local changes.
-- [ ] Sync queued changes when the network returns.
-- [ ] Show clear synced/unsynced state in the UI.
-- [ ] Resolve basic sync conflicts safely.
+- [ ] Choose ads provider, likely Google AdMob.
+- [ ] Add ad placement that does not block job-site workflows.
+- [ ] Avoid ads on critical save/delete/report actions.
+- [ ] Choose purchase approach, likely RevenueCat or platform-native IAP.
+- [ ] Add one-time ad-free purchase.
+- [ ] Add restore purchase support.
+- [ ] Store ad-free entitlement locally after purchase validation.
+- [ ] Hide ads for ad-free users.
+- [ ] Add tests or mocks around ad-free entitlement logic.
 
-## Phase 8: Invoicing And Business Value
+## Phase 6: Privacy, Backup, And Data Safety
 
-- [ ] Add quote/invoice line items.
-- [ ] Add labour and materials totals.
-- [ ] Add tax/GST configuration.
-- [ ] Export quote PDF.
-- [ ] Export invoice PDF.
-- [ ] Add paid/unpaid invoice status.
-- [ ] Add a simple dashboard for open jobs, completed jobs, hours logged, overdue reminders, and unpaid invoices.
+- [ ] Add an in-app note that job data is stored on this device.
+- [ ] Warn that deleting the app may delete app data.
+- [ ] Add a simple backup/export reminder.
+- [ ] Add a privacy policy for app stores.
+- [ ] Make sure no unnecessary personal data is sent to a backend.
+- [ ] Remove or disable analytics unless explicitly needed.
+- [ ] If analytics are added later, keep them anonymous and minimal.
 
-## Phase 9: Monetization
+## Phase 7: Legacy Backend Cleanup
 
-- [ ] Define free-tier limits for active jobs, photos, and PDF exports.
-- [ ] Define paid-tier capabilities.
-- [ ] Choose Stripe, RevenueCat, or platform-native subscriptions.
-- [ ] Add subscription entitlement checks on backend features.
-- [ ] Add frontend paywall states for limited features.
-- [ ] Add billing tests for free and paid access rules.
+- [ ] Decide whether to remove `backend/` entirely for the MVP.
+- [ ] If keeping backend, mark it as optional/legacy in docs.
+- [ ] Remove frontend dependency on `API_URL` for normal job workflows.
+- [ ] Remove auth screens and auth context if no longer needed.
+- [ ] Remove backend-only production tasks from the active roadmap.
+- [ ] Keep useful tests or fixtures only if they still help the local-first app.
 
-## Phase 10: Quality, CI, And Observability
+## Phase 8: Mobile Polish
 
-- [ ] Add backend linting.
-- [ ] Add frontend linting.
-- [ ] Add CI for backend tests.
-- [ ] Add CI for frontend tests.
-- [ ] Add deployment workflow for the backend.
-- [ ] Add Expo build workflow for mobile releases.
-- [ ] Add Sentry or equivalent error tracking.
-- [ ] Add mobile crash reporting.
-- [ ] Add backend latency and error monitoring.
-- [ ] Add E2E smoke tests for create job, edit job, attach photo, and export PDF.
+- [ ] Make first launch go straight to jobs.
+- [ ] Add a helpful empty state.
+- [ ] Keep buttons large and job-site friendly.
+- [ ] Improve offline/no-permission messages.
+- [ ] Add loading states for local database initialization.
+- [ ] Check small-screen layout for all forms.
+- [ ] Check large-text accessibility.
+- [ ] Add app icon and splash screen.
 
-## Suggested First Sprint
+## Phase 9: Release Readiness
 
-- [ ] Add `.nvmrc`.
-- [ ] Make backend `PORT` configurable.
-- [ ] Add `GET /api/health`.
-- [ ] Add global API error handler.
-- [ ] Add ObjectId validation.
-- [ ] Add authentication and job ownership design.
-- [ ] Choose photo/PDF storage provider.
+- [ ] Add app store description focused on no-login local job tracking.
+- [ ] Add screenshots.
+- [ ] Add privacy labels.
+- [ ] Add ad disclosure.
+- [ ] Add purchase restore instructions.
+- [ ] Test fresh install.
+- [ ] Test app update with existing local data.
+- [ ] Test delete/reinstall data behavior.
+- [ ] Build Android release.
+- [ ] Build iOS release.
+
+## Later, Only If Needed
+
+- [ ] Optional cloud backup.
+- [ ] Optional sync across devices.
+- [ ] Optional teams.
+- [ ] Optional invoicing.
+- [ ] Optional subscriptions if recurring cloud costs are introduced.

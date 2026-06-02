@@ -1,61 +1,82 @@
 # TradieTrack Lite
 
-TradieTrack Lite is a small mobile-first job tracking app for tradespeople. It helps plumbers, cleaners, handymen, and other field workers keep job details, site notes, status, photos, reminders, time logs, and simple PDF reports in one place instead of scattered across messages, notes, and camera rolls.
+TradieTrack Lite is intended to be a simple, local-first mobile job tracker for tradies. The product goal is: install it, open it, and start tracking jobs immediately without creating an account.
 
-The project is split into:
+The app should be free to use with ads, with a one-time purchase to remove ads. Job data, photos, reminders, and reports should live on the user's device by default.
 
-- `frontend/`: React Native app built with Expo.
-- `backend/`: Express API backed by MongoDB through Mongoose.
+## Product Direction
 
-## What The App Does
+TradieTrack Lite should prioritize:
 
-- Create jobs with a name, address, and notes.
-- View a job list with status badges and summary counts.
-- Edit job details, status, start time, end time, and reminder time.
-- Mark jobs as `pending`, `in_progress`, or `completed`.
-- Track logged time from start and end dates.
-- Capture and attach job photos from the device camera.
-- Schedule local reminder notifications through Expo Notifications.
-- Generate a basic A4 PDF job report through the backend.
-- Delete jobs with confirmation.
+- No login or account setup.
+- Local on-device job storage.
+- Photos stored in app/device storage.
+- Local reminders for follow-ups.
+- Local export/share for job records and reports.
+- Free ad-supported use.
+- One-time purchase for an ad-free experience.
+- Clear user expectations: data stays on the phone unless exported or backed up.
+
+This direction intentionally avoids cloud sync, user accounts, subscriptions, teams, and backend storage for the MVP.
+
+## Current Repository State
+
+The codebase currently contains a React Native/Expo frontend and an Express/MongoDB backend from an earlier cloud/API direction. Recent work added authentication and user-scoped backend jobs, but the product direction has now changed.
+
+Treat backend/auth/cloud storage code as legacy unless a task explicitly says otherwise. The next implementation work should move normal app usage back to local mobile storage and remove the need for a backend during everyday use.
+
+## What The App Should Do
+
+- Create jobs with job title, customer details, address, notes, status, and reminders.
+- View jobs in a simple mobile list with status and logged time.
+- Edit job details on-site.
+- Attach job photos from the device camera.
+- Store photos locally in app-controlled device storage.
+- Trigger local notifications for reminders.
+- Export or share a job report from the device.
+- Show ads in the free version.
+- Hide ads after a one-time purchase.
 
 ## Tech Stack
 
-### Frontend
+### Mobile App
 
 - React Native
 - Expo
 - React Navigation
-- Axios
+- Local database, preferably SQLite
+- App/device file storage for photos
 - Expo Image Picker
 - Expo Notifications
-- Jest and React Native Testing Library
+- Expo sharing/printing tools where useful
+- Ads SDK, likely Google AdMob
+- In-app purchase SDK, likely RevenueCat or platform-native IAP
 
-### Backend
+### Legacy Backend
 
 - Node.js
 - Express
 - MongoDB and Mongoose
-- Puppeteer for PDF generation
-- Jest, Supertest, Fast Check, and MongoDB Memory Server
+- Puppeteer for server-side PDF generation
+
+The backend may remain useful for tests, experiments, or future optional backup features, but it should not be required for the local-first MVP.
 
 ## Project Structure
 
 ```text
 .
-├── backend/
-│   ├── index.js              # Express app and API routes
-│   ├── models/Job.js         # Mongoose job schema
-│   ├── tests/api.test.js     # Backend API and property tests
-│   └── .env.example
-├── frontend/
-│   ├── App.js                # Navigation shell
+├── backend/                  # Legacy API from earlier backend-first direction
+│   ├── index.js
+│   ├── models/
+│   └── tests/
+├── frontend/                 # Expo React Native app
+│   ├── App.js
 │   └── src/
-│       ├── config.js         # API base URL
-│       ├── screens/          # Jobs, CreateJob, JobDetail
-│       ├── utils/time.js     # Time logging helpers
-│       └── __tests__/        # Frontend tests
-├── App_Readme.md             # Original build specification
+│       ├── screens/
+│       ├── utils/
+│       └── __tests__/
+├── AGENTS.md
+├── TASKS.md
 └── README.md
 ```
 
@@ -63,8 +84,7 @@ The project is split into:
 
 - Node.js `v24.16.0` LTS
 - npm `11.13.0`
-- MongoDB running locally or a reachable MongoDB connection string
-- Expo Go, an iOS simulator, or an Android emulator for the mobile app
+- Expo Go, an iOS simulator, or an Android emulator
 
 Use the version pinned in `.nvmrc`:
 
@@ -75,46 +95,7 @@ node -v
 npm -v
 ```
 
-Node `v26` caused local dependency issues while verifying this repo, so use the pinned LTS version for development.
-
 ## Setup
-
-### Backend
-
-```sh
-cd backend
-cp .env.example .env
-npm install
-```
-
-Set `MONGO_URI` in `backend/.env`.
-
-Example:
-
-```env
-PORT=4000
-MONGO_URI=mongodb://127.0.0.1:27017/tradietrack-lite
-AUTH_TOKEN_SECRET=replace-with-a-long-random-secret
-CORS_ORIGINS=http://localhost:19006,http://localhost:8081
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=1000
-REPORT_TIME_ZONE=Australia/Sydney
-PDF_TMP_DIR=/tmp
-```
-
-Start the API:
-
-```sh
-npm run dev
-```
-
-If `nodemon` hits a local file watcher limit, run the server directly:
-
-```sh
-node index.js
-```
-
-The API listens on `http://localhost:4000`.
 
 ### Frontend
 
@@ -124,72 +105,43 @@ npm install
 npm start
 ```
 
-The default API URL is defined in `frontend/src/config.js`:
+### Backend
 
-```js
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000/api";
-```
-
-For a physical device, set `EXPO_PUBLIC_API_URL` to a URL the device can reach, usually your machine's LAN IP:
-
-```sh
-EXPO_PUBLIC_API_URL=http://192.168.1.20:4000/api npm start
-```
-
-## Verified Local Run
-
-On this machine, the app was started with:
-
-- Backend: `node index.js`
-- Frontend: `expo start --localhost --port 8081`
-
-Verified results:
-
-- Backend connected to MongoDB and listened on port `4000`.
-- `GET http://localhost:4000/api/jobs` returned stored job data.
-- Expo Metro started and waited on `exp://127.0.0.1:8081`.
-
-## API
-
-Base URL: `/api`
-
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/jobs` | List all jobs |
-| `POST` | `/jobs` | Create a job |
-| `PUT` | `/jobs/:id` | Update a job |
-| `DELETE` | `/jobs/:id` | Delete a job |
-| `POST` | `/jobs/:id/pdf` | Generate a PDF report |
-
-### Job Payload
-
-```json
-{
-  "name": "Fix kitchen tap",
-  "customerName": "Sarah Williams",
-  "customerPhone": "0400 123 456",
-  "customerEmail": "sarah@example.com",
-  "customerNotes": "Prefers afternoon appointments",
-  "address": "12 Main St",
-  "notes": "Leaking under sink",
-  "status": "pending",
-  "photos": [],
-  "startDate": "2026-05-31T00:00:00.000Z",
-  "endDate": null,
-  "reminder": null
-}
-```
-
-`name` and `address` are required. `status` must be `pending`, `in_progress`, or `completed`.
-
-## Testing
-
-Run backend tests:
+The backend is currently legacy. Run it only when working on existing backend tests or while removing/migrating backend-dependent features.
 
 ```sh
 cd backend
-npm test
+cp .env.example .env
+npm install
+npm run dev
 ```
+
+## Local-First Storage Plan
+
+The app should move toward this model:
+
+- Jobs stored in a local SQLite database.
+- Photos copied into app-owned local file storage.
+- Job records store local photo paths, not remote URLs.
+- Reminders scheduled locally on the device.
+- Reports generated locally or assembled into shareable device files.
+- Optional manual export/backup can come later.
+
+## Monetization Plan
+
+Free version:
+
+- Full useful job tracking.
+- Ads displayed in non-critical parts of the app.
+
+One-time purchase:
+
+- Removes ads permanently.
+- Purchase should be restorable through the app store account.
+
+Avoid subscriptions unless the product later adds cloud sync, team features, or ongoing server costs.
+
+## Testing
 
 Run frontend tests:
 
@@ -198,10 +150,22 @@ cd frontend
 npm test
 ```
 
-## Notes And Current Limitations
+Run backend tests only when touching legacy backend code:
 
-- There is no authentication in the current version.
-- Photos are stored as URI strings on the job document.
-- PDF generation returns a temporary local file path from the backend.
-- The frontend is mobile-first and intended to run through Expo.
-- `App_Readme.md` contains the original LLM-ready build specification and product direction.
+```sh
+cd backend
+npm test
+```
+
+## User-Facing Data Expectations
+
+The app should clearly communicate:
+
+- Data is stored on this device.
+- Deleting the app may delete the app data.
+- Photos and jobs will not automatically sync to another device.
+- Users should export or back up important records.
+
+## Next Build Priority
+
+Start by replacing backend-backed job flows with local mobile storage. After that, move photos into app-local storage, remove login from the normal app flow, and then add ads plus a one-time ad-free purchase.
