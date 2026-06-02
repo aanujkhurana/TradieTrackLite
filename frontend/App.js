@@ -4,16 +4,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import Jobs from './src/screens/Jobs';
 import CreateJob from './src/screens/CreateJob';
 import JobDetail from './src/screens/JobDetail';
-import AuthScreen from './src/screens/AuthScreen';
-import { AuthProvider, useAuth } from './src/AuthContext';
 
 const Stack = createStackNavigator();
 
 function AppNavigator() {
-  const { token } = useAuth();
-
-  if (!token) return <AuthScreen />;
-
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Jobs">
@@ -38,9 +32,5 @@ function AppNavigator() {
 }
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <AppNavigator />
-    </AuthProvider>
-  );
+  return <AppNavigator />;
 }

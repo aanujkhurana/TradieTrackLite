@@ -8,9 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import axios from 'axios';
-import { API_URL } from '../config';
-import { getAuthConfig, useAuth } from '../AuthContext';
+import { deleteJob, listJobs } from '../data/jobs';
 import { formatLoggedDuration } from '../utils/time';
 
 const STATUS_META = {
@@ -20,24 +18,16 @@ const STATUS_META = {
 };
 
 export default function Jobs({ navigation }) {
-  const { token, signOut } = useAuth();
   const [jobs, setJobs] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchJobs = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_URL}/jobs`, getAuthConfig(token));
-      const rows = Array.isArray(res.data) ? res.data : [];
-      const sorted = [...rows].sort((a, b) => {
-        const aTime = new Date(a.createdAt || 0).getTime();
-        const bTime = new Date(b.createdAt || 0).getTime();
-        return bTime - aTime;
-      });
-      setJobs(sorted);
+      setJobs(await listJobs());
     } catch (err) {
-      Alert.alert('No connection', 'No connection — changes not saved');
+      Alert.alert('Local Storage Error', 'Jobs could not be loaded from this device.');
     }
-  }, [token]);
+  }, []);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchJobs();
@@ -50,7 +40,6 @@ export default function Jobs({ navigation }) {
     }, [fetchJobs])
   );
 
-  // Task 7.3 — delete with confirm + network error handling
   const handleDelete = (job) => {
     Alert.alert(
       'Delete Job',
@@ -62,11 +51,10 @@ export default function Jobs({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await axios.delete(`${API_URL}/jobs/${job._id}`, getAuthConfig(token));
-              // Remove from local state on success (req 4.3)
+              await deleteJob(job._id);
               setJobs((prev) => prev.filter((j) => j._id !== job._id));
             } catch (err) {
-              Alert.alert('No connection', 'No connection — changes not saved');
+              Alert.alert('Local Storage Error', 'Job could not be deleted from this device.');
             }
           },
         },
@@ -170,9 +158,6 @@ export default function Jobs({ navigation }) {
         >
           <Text style={styles.addBtnText}>+ Add New Job</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.signOutBtn} onPress={signOut} activeOpacity={0.8}>
-          <Text style={styles.signOutBtnText}>Sign Out</Text>
-        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -220,20 +205,6 @@ const styles = StyleSheet.create({
   addBtnText: {
     color: '#fff',
     fontSize: 17,
-    fontWeight: '700',
-  },
-  signOutBtn: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#d9e0e8',
-  },
-  signOutBtnText: {
-    color: '#1565C0',
-    fontSize: 14,
     fontWeight: '700',
   },
   summaryCard: {

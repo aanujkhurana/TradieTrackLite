@@ -16,18 +16,18 @@ Backend/auth/cloud work from earlier phases is now considered legacy unless a ta
 
 ## Phase 1: Remove Backend Dependency From Normal App Use
 
-- [ ] Add a local data access layer in the frontend.
-- [ ] Choose and install a local database library, preferably SQLite.
-- [ ] Create a local job schema for job title, customer details, address, notes, status, dates, reminders, and photos.
-- [ ] Add local CRUD helpers for jobs.
-- [ ] Replace `Jobs` screen API loading with local database loading.
-- [ ] Replace `CreateJob` API submission with local database insert.
-- [ ] Replace `JobDetail` API update with local database update.
-- [ ] Replace delete API calls with local database delete.
-- [ ] Remove login/register from the normal app launch flow.
-- [ ] Remove bearer-token requirements from frontend job flows.
-- [ ] Keep backend code only as legacy or remove it after frontend is fully local.
-- [ ] Update tests to cover local job create, list, update, and delete.
+- [x] Add a local data access layer in the frontend.
+- [x] Choose and install a local database library, preferably SQLite.
+- [x] Create a local job schema for job title, customer details, address, notes, status, dates, reminders, and photos.
+- [x] Add local CRUD helpers for jobs.
+- [x] Replace `Jobs` screen API loading with local database loading.
+- [x] Replace `CreateJob` API submission with local database insert.
+- [x] Replace `JobDetail` API update with local database update.
+- [x] Replace delete API calls with local database delete.
+- [x] Remove login/register from the normal app launch flow.
+- [x] Remove bearer-token requirements from frontend job flows.
+- [x] Keep backend code only as legacy or remove it after frontend is fully local.
+- [x] Update tests to cover local job create, list, update, and delete.
 
 ## Phase 2: Local Photo Storage
 

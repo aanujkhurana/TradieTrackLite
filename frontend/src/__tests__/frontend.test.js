@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 import fc from 'fast-check';
 
@@ -12,10 +12,13 @@ import fc from 'fast-check';
 // Mocks — must be declared before any imports that trigger module resolution
 // ---------------------------------------------------------------------------
 
-jest.mock('axios');
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ goBack: jest.fn() }),
   useFocusEffect: jest.fn(),
+}));
+jest.mock('../data/jobs', () => ({
+  createJob: jest.fn(),
+  updateJob: jest.fn(),
 }));
 jest.mock('expo-image-picker', () => ({
   requestCameraPermissionsAsync: jest.fn(),
@@ -36,7 +39,7 @@ jest.mock('react-native/Libraries/Utilities/Dimensions', () => ({
   removeEventListener: jest.fn(),
 }));
 
-import axios from 'axios';
+import { createJob } from '../data/jobs';
 import CreateJob from '../screens/CreateJob';
 import JobDetail from '../screens/JobDetail';
 
@@ -170,38 +173,32 @@ describe('CreateJob screen', () => {
     jest.clearAllMocks();
   });
 
-  it('empty name prevents submit — no axios.post called', async () => {
+  it('empty name prevents submit and does not create a job', () => {
     const { getByPlaceholderText, getByText } = render(
       <CreateJob navigation={mockNavigation} />
     );
 
     // Leave name empty, fill address
     fireEvent.changeText(getByPlaceholderText('e.g. 12 Main St, Sydney'), '1 Test St');
+    fireEvent.press(getByText('Save Job'));
 
-    await act(async () => {
-      fireEvent.press(getByText('Save Job'));
-    });
-
-    expect(axios.post).not.toHaveBeenCalled();
+    expect(createJob).not.toHaveBeenCalled();
   });
 
-  it('empty address prevents submit — no axios.post called', async () => {
+  it('empty address prevents submit and does not create a job', () => {
     const { getByPlaceholderText, getByText } = render(
       <CreateJob navigation={mockNavigation} />
     );
 
     // Fill name, leave address empty
     fireEvent.changeText(getByPlaceholderText('e.g. Fix kitchen tap'), 'Fix tap');
+    fireEvent.press(getByText('Save Job'));
 
-    await act(async () => {
-      fireEvent.press(getByText('Save Job'));
-    });
-
-    expect(axios.post).not.toHaveBeenCalled();
+    expect(createJob).not.toHaveBeenCalled();
   });
 
-  it('successful POST navigates back', async () => {
-    axios.post.mockResolvedValueOnce({ data: { _id: '1', name: 'Fix tap', address: '1 Test St' } });
+  it('successful local create navigates back', async () => {
+    createJob.mockResolvedValueOnce({ _id: '1', name: 'Fix tap', address: '1 Test St' });
 
     const { getByPlaceholderText, getByText } = render(
       <CreateJob navigation={mockNavigation} />
@@ -214,8 +211,13 @@ describe('CreateJob screen', () => {
       fireEvent.press(getByText('Save Job'));
     });
 
-    expect(axios.post).toHaveBeenCalledTimes(1);
-    expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(createJob).toHaveBeenCalledWith(expect.objectContaining({
+        name: 'Fix tap',
+        address: '1 Test St',
+      }));
+      expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
+    });
   });
 });
 

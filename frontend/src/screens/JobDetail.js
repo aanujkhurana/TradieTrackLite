@@ -16,10 +16,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import axios from 'axios';
-import { API_URL } from '../config';
-import { getAuthConfig, useAuth } from '../AuthContext';
-import { getApiErrorMessage } from '../utils/apiError';
+import { updateJob } from '../data/jobs';
 import { formatLoggedDuration } from '../utils/time';
 
 const STATUS_OPTIONS = [
@@ -36,7 +33,6 @@ const formatDateLabel = (value, fallback = 'Not set') => {
 
 export default function JobDetail({ route, navigation }) {
   const { job } = route.params;
-  const { token } = useAuth();
 
   const [name, setName] = useState(job.name || '');
   const [customerName, setCustomerName] = useState(job.customerName || '');
@@ -62,17 +58,15 @@ export default function JobDetail({ route, navigation }) {
   );
 
 
-  const handleApiError = (err) => {
-    if (!err.response) {
-      Alert.alert('No connection', 'No connection — changes not saved');
-    } else if (err.response.status === 404) {
+  const handleStorageError = (err) => {
+    if (err.code === 'NOT_FOUND') {
       Alert.alert('Not Found', 'Job not found', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-    } else if (err.response.status === 400) {
-      Alert.alert('Validation Error', getApiErrorMessage(err, 'Invalid input'));
+    } else if (err.code === 'VALIDATION_ERROR') {
+      Alert.alert('Validation Error', err.message);
     } else {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Alert.alert('Local Storage Error', 'Job changes could not be saved on this device.');
     }
   };
   const callCustomer = async () => {
@@ -119,24 +113,20 @@ export default function JobDetail({ route, navigation }) {
     }
 
     try {
-      await axios.put(
-        `${API_URL}/jobs/${job._id}`,
-        {
-          name: name.trim(),
-          customerName: customerName.trim(),
-          customerPhone: customerPhone.trim(),
-          customerEmail: customerEmail.trim(),
-          customerNotes,
-          address: address.trim(),
-          notes,
-          status,
-          photos,
-          startDate: startDate ? startDate.toISOString() : null,
-          endDate: resolvedEndDate ? resolvedEndDate.toISOString() : null,
-          reminder: reminder ? reminder.toISOString() : null,
-        },
-        getAuthConfig(token)
-      );
+      await updateJob(job._id, {
+        name: name.trim(),
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        customerEmail: customerEmail.trim(),
+        customerNotes,
+        address: address.trim(),
+        notes,
+        status,
+        photos,
+        startDate: startDate ? startDate.toISOString() : null,
+        endDate: resolvedEndDate ? resolvedEndDate.toISOString() : null,
+        reminder: reminder ? reminder.toISOString() : null,
+      });
 
       if (resolvedEndDate && !endDate) {
         setEndDate(resolvedEndDate);
@@ -148,7 +138,7 @@ export default function JobDetail({ route, navigation }) {
 
       navigation.goBack();
     } catch (err) {
-      handleApiError(err);
+      handleStorageError(err);
     }
   };
   // ── Photo capture (9.3) ───────────────────────────────────────────────────
@@ -240,30 +230,25 @@ export default function JobDetail({ route, navigation }) {
         ? new Date()
         : undefined;
 
-  const generatePDF = async () => {
+  const shareJobSummary = async () => {
+    const summary = [
+      name.trim(),
+      customerName.trim() ? `Customer: ${customerName.trim()}` : null,
+      customerPhone.trim() ? `Phone: ${customerPhone.trim()}` : null,
+      customerEmail.trim() ? `Email: ${customerEmail.trim()}` : null,
+      address.trim() ? `Address: ${address.trim()}` : null,
+      `Status: ${status}`,
+      startDate ? `Started: ${startDate.toLocaleString()}` : null,
+      endDate ? `Ended: ${endDate.toLocaleString()}` : null,
+      `Logged: ${totalLoggedTime}`,
+      reminder ? `Reminder: ${reminder.toLocaleString()}` : null,
+      notes ? `Notes: ${notes}` : null,
+    ].filter(Boolean).join('\n');
+
     try {
-      const res = await axios.post(`${API_URL}/jobs/${job._id}/pdf`, null, getAuthConfig(token));
-      const url = res.data?.url;
-      if (url) {
-        try {
-          await Share.share({ message: url });
-        } catch {
-          await Linking.openURL(url);
-        }
-      }
+      await Share.share({ message: summary });
     } catch (err) {
-      if (!err.response) {
-        Alert.alert('No connection', 'No connection — changes not saved');
-      } else if (err.response.status === 404) {
-        Alert.alert('Not Found', 'Job not found', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
-      } else {
-        Alert.alert('PDF Error', 'PDF generation failed. Would you like to retry?', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Retry', onPress: generatePDF },
-        ]);
-      }
+      Alert.alert('Share Error', 'Job summary could not be shared.');
     }
   };
 
@@ -478,8 +463,8 @@ export default function JobDetail({ route, navigation }) {
         )}
       </View>
 
-      <TouchableOpacity style={styles.pdfBtn} onPress={generatePDF} activeOpacity={0.8}>
-        <Text style={styles.pdfBtnText}>Generate PDF</Text>
+      <TouchableOpacity style={styles.pdfBtn} onPress={shareJobSummary} activeOpacity={0.8}>
+        <Text style={styles.pdfBtnText}>Share Job Summary</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.saveBtn} onPress={save} activeOpacity={0.8}>

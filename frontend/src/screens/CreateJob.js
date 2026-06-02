@@ -8,13 +8,9 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import axios from 'axios';
-import { API_URL } from '../config';
-import { getAuthConfig, useAuth } from '../AuthContext';
-import { getApiErrorMessage } from '../utils/apiError';
+import { createJob } from '../data/jobs';
 
 export default function CreateJob({ navigation }) {
-  const { token } = useAuth();
   const [name, setName] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -42,25 +38,21 @@ export default function CreateJob({ navigation }) {
     if (!valid) return;
 
     try {
-      await axios.post(
-        `${API_URL}/jobs`,
-        {
-          name: name.trim(),
-          customerName: customerName.trim(),
-          customerPhone: customerPhone.trim(),
-          customerEmail: customerEmail.trim(),
-          customerNotes,
-          address: address.trim(),
-          notes,
-        },
-        getAuthConfig(token)
-      );
+      await createJob({
+        name: name.trim(),
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        customerEmail: customerEmail.trim(),
+        customerNotes,
+        address: address.trim(),
+        notes,
+      });
       navigation.goBack();
     } catch (err) {
-      if (err.response?.status === 400) {
-        Alert.alert('Validation Error', getApiErrorMessage(err, 'Invalid input'));
+      if (err.code === 'VALIDATION_ERROR') {
+        Alert.alert('Validation Error', err.message);
       } else {
-        Alert.alert('No connection', 'No connection — changes not saved');
+        Alert.alert('Local Storage Error', 'Job could not be saved on this device.');
       }
     }
   };
