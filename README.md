@@ -133,13 +133,34 @@ Free version:
 
 - Full useful job tracking.
 - Ads displayed in non-critical parts of the app.
+- Google AdMob banner ads are wired for the jobs list.
 
 One-time purchase:
 
 - Removes ads permanently.
 - Purchase should be restorable through the app store account.
+- RevenueCat is wired for a one-time `ad_free` entitlement.
 
 Avoid subscriptions unless the product later adds cloud sync, team features, or ongoing server costs.
+
+### Monetization Configuration
+
+Real ads and purchases require a native development or store build with app-store configuration. The repo does not include production credentials.
+
+Set these environment variables before building monetized releases:
+
+```sh
+EXPO_PUBLIC_ADMOB_ANDROID_APP_ID=...
+EXPO_PUBLIC_ADMOB_IOS_APP_ID=...
+EXPO_PUBLIC_ADMOB_ANDROID_BANNER_AD_UNIT_ID=...
+EXPO_PUBLIC_ADMOB_IOS_BANNER_AD_UNIT_ID=...
+EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY=...
+EXPO_PUBLIC_REVENUECAT_IOS_API_KEY=...
+EXPO_PUBLIC_AD_FREE_PRODUCT_ID=tradietrack_lite_ad_free
+EXPO_PUBLIC_AD_FREE_ENTITLEMENT_ID=ad_free
+```
+
+Development builds use Google test banner IDs when production banner unit IDs are absent. Purchases remain unavailable until RevenueCat keys and store products are configured.
 
 ## Testing
 

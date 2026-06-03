@@ -12,6 +12,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { deleteJob, listJobs } from '../data/jobs';
 import { cleanupStoredJobPhotos } from '../data/photos';
 import { exportJobsBackup } from '../data/backups';
+import AdBanner from '../components/AdBanner';
+import { useMonetization } from '../monetization/MonetizationContext';
 import {
   STATUS_FILTERS,
   STATUS_META,
@@ -27,6 +29,7 @@ export default function Jobs({ navigation }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupError, setBackupError] = useState('');
+  const { isAdFree } = useMonetization();
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -248,6 +251,15 @@ export default function Jobs({ navigation }) {
         </TouchableOpacity>
       </View>
       {backupError ? <Text style={styles.backupError}>{backupError}</Text> : null}
+      <TouchableOpacity
+        style={styles.adFreeBtn}
+        onPress={() => navigation.navigate('AdFree')}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.adFreeBtnText}>
+          {isAdFree ? 'Ad-Free Active' : 'Remove Ads'}
+        </Text>
+      </TouchableOpacity>
 
       <FlatList
         data={visibleJobs}
@@ -259,6 +271,7 @@ export default function Jobs({ navigation }) {
           <>
             {renderSummary()}
             {renderFilters()}
+            <AdBanner placement="jobs-list" />
           </>
         }
         contentContainerStyle={styles.listContent}
@@ -328,6 +341,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 12,
     textAlign: 'center',
+  },
+  adFreeBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d9e0e8',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 12,
+  },
+  adFreeBtnText: {
+    color: '#1565C0',
+    fontSize: 13,
+    fontWeight: '800',
   },
   summaryCard: {
     backgroundColor: '#fff',

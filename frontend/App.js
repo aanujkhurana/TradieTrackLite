@@ -4,6 +4,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 import Jobs from './src/screens/Jobs';
 import CreateJob from './src/screens/CreateJob';
 import JobDetail from './src/screens/JobDetail';
+import AdFree from './src/screens/AdFree';
+import { MonetizationProvider } from './src/monetization/MonetizationContext';
 
 const Stack = createStackNavigator();
 
@@ -26,11 +28,20 @@ function AppNavigator() {
           component={JobDetail}
           options={{ title: 'Job Detail' }}
         />
+        <Stack.Screen
+          name="AdFree"
+          component={AdFree}
+          options={{ title: 'Ad-Free' }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
 export default function App() {
-  return <AppNavigator />;
+  return (
+    <MonetizationProvider>
+      <AppNavigator />
+    </MonetizationProvider>
+  );
 }

@@ -12,6 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import Purchases from 'react-native-purchases';
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before any imports that trigger module resolution
@@ -55,6 +56,32 @@ jest.mock('expo-file-system', () => ({
   readAsStringAsync: jest.fn(),
   writeAsStringAsync: jest.fn(),
 }));
+jest.mock('react-native-google-mobile-ads', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    BannerAd: (props) => React.createElement(View, { testID: 'mock-banner-ad', ...props }),
+    BannerAdSize: {
+      ANCHORED_ADAPTIVE_BANNER: 'ANCHORED_ADAPTIVE_BANNER',
+    },
+    TestIds: {
+      BANNER: 'test-banner-id',
+    },
+  };
+});
+jest.mock('react-native-purchases', () => ({
+  __esModule: true,
+  default: {
+    configure: jest.fn(),
+    setLogLevel: jest.fn(),
+    getOfferings: jest.fn(),
+    purchasePackage: jest.fn(),
+    restorePurchases: jest.fn(),
+  },
+  LOG_LEVEL: {
+    DEBUG: 'DEBUG',
+  },
+}));
 jest.mock('@react-native-community/datetimepicker', () => {
   const React = require('react');
   const { View } = require('react-native');
@@ -75,6 +102,22 @@ import {
 } from '../utils/jobWorkflow';
 import { buildJobsBackupPayload } from '../data/backups';
 import { buildJobReportHtml } from '../data/reports';
+import {
+  AD_FREE_ENTITLEMENT_ID,
+  AD_FREE_PRODUCT_ID,
+  getAdMobBannerUnitId,
+} from '../monetization/config';
+import {
+  loadAdFreeEntitlement,
+  saveAdFreeEntitlement,
+} from '../monetization/entitlementStorage';
+import {
+  findAdFreePackage,
+  hasActiveAdFreeEntitlement,
+  purchaseAdFree,
+  resetPurchasesConfigurationForTests,
+  restoreAdFreePurchase,
+} from '../monetization/revenueCat';
 import CreateJob from '../screens/CreateJob';
 import JobDetail from '../screens/JobDetail';
 
@@ -327,6 +370,132 @@ describe('Local reports and backup helpers', () => {
         photos: ['file:///app/Documents/job-photos/photo-1.jpg'],
       }),
     ]);
+  });
+});
+
+describe('Ad-free entitlement and monetization helpers', () => {
+  const originalAndroidKey = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    resetPurchasesConfigurationForTests();
+    process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY = 'test_revenuecat_key';
+  });
+
+  afterEach(() => {
+    if (originalAndroidKey === undefined) {
+      delete process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+    } else {
+      process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY = originalAndroidKey;
+    }
+  });
+
+  it('loads an empty entitlement when no local ad-free unlock is stored', async () => {
+    FileSystem.getInfoAsync.mockResolvedValueOnce({ exists: false });
+
+    await expect(loadAdFreeEntitlement()).resolves.toEqual(expect.objectContaining({
+      isAdFree: false,
+      source: 'none',
+    }));
+  });
+
+  it('stores a validated ad-free entitlement locally', async () => {
+    FileSystem.writeAsStringAsync.mockResolvedValueOnce(undefined);
+
+    await saveAdFreeEntitlement({
+      isAdFree: true,
+      source: 'purchase',
+      provider: 'RevenueCat',
+      purchasedAt: '2026-06-03T00:00:00.000Z',
+      updatedAt: '2026-06-03T00:00:00.000Z',
+    });
+
+    expect(FileSystem.writeAsStringAsync).toHaveBeenCalledWith(
+      'file:///app/Documents/tradietrack-ad-free-entitlement.json',
+      expect.stringContaining('"isAdFree":true'),
+      { encoding: 'utf8' }
+    );
+  });
+
+  it('recognizes the configured active RevenueCat ad-free entitlement', () => {
+    expect(hasActiveAdFreeEntitlement({
+      entitlements: {
+        active: {
+          [AD_FREE_ENTITLEMENT_ID]: {
+            latestPurchaseDate: '2026-06-03T00:00:00.000Z',
+          },
+        },
+      },
+    })).toBe(true);
+    expect(hasActiveAdFreeEntitlement({ entitlements: { active: {} } })).toBe(false);
+  });
+
+  it('selects the one-time ad-free product from RevenueCat offerings', () => {
+    const adFreePackage = {
+      identifier: 'ad-free-package',
+      product: { identifier: AD_FREE_PRODUCT_ID },
+    };
+
+    expect(findAdFreePackage({
+      current: {
+        availablePackages: [
+          { identifier: 'other', product: { identifier: 'other_product' } },
+          adFreePackage,
+        ],
+      },
+    })).toBe(adFreePackage);
+  });
+
+  it('validates a purchase before returning local ad-free state', async () => {
+    const adFreePackage = {
+      identifier: 'ad-free-package',
+      product: { identifier: AD_FREE_PRODUCT_ID },
+    };
+    Purchases.getOfferings.mockResolvedValueOnce({
+      current: { availablePackages: [adFreePackage] },
+    });
+    Purchases.purchasePackage.mockResolvedValueOnce({
+      customerInfo: {
+        entitlements: {
+          active: {
+            [AD_FREE_ENTITLEMENT_ID]: {
+              latestPurchaseDate: '2026-06-03T00:00:00.000Z',
+            },
+          },
+        },
+      },
+    });
+
+    await expect(purchaseAdFree({ platform: 'android' })).resolves.toEqual(expect.objectContaining({
+      isAdFree: true,
+      source: 'purchase',
+      provider: 'RevenueCat',
+      purchasedAt: '2026-06-03T00:00:00.000Z',
+    }));
+    expect(Purchases.configure).toHaveBeenCalledWith({ apiKey: 'test_revenuecat_key' });
+    expect(Purchases.purchasePackage).toHaveBeenCalledWith(adFreePackage);
+  });
+
+  it('restore only returns ad-free state when the store account has the entitlement', async () => {
+    Purchases.restorePurchases.mockResolvedValueOnce({
+      entitlements: {
+        active: {
+          [AD_FREE_ENTITLEMENT_ID]: {
+            latestPurchaseDate: '2026-06-03T00:00:00.000Z',
+          },
+        },
+      },
+    });
+
+    await expect(restoreAdFreePurchase({ platform: 'android' })).resolves.toEqual(
+      expect.objectContaining({ isAdFree: true })
+    );
+  });
+
+  it('uses test banner IDs only for development when production ad unit IDs are absent', () => {
+    expect(getAdMobBannerUnitId('android', true, { BANNER: 'mock-test-id' }))
+      .toBe('mock-test-id');
+    expect(getAdMobBannerUnitId('android', false, {})).toBeNull();
   });
 });
 

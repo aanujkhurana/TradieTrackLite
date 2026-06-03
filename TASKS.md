@@ -63,15 +63,15 @@ Backend/auth/cloud work from earlier phases is now considered legacy unless a ta
 
 ## Phase 5: Ads And One-Time Ad-Free Purchase
 
-- [ ] Choose ads provider, likely Google AdMob.
-- [ ] Add ad placement that does not block job-site workflows.
-- [ ] Avoid ads on critical save/delete/report actions.
-- [ ] Choose purchase approach, likely RevenueCat or platform-native IAP.
-- [ ] Add one-time ad-free purchase.
-- [ ] Add restore purchase support.
-- [ ] Store ad-free entitlement locally after purchase validation.
-- [ ] Hide ads for ad-free users.
-- [ ] Add tests or mocks around ad-free entitlement logic.
+- [x] Choose ads provider, likely Google AdMob.
+- [x] Add ad placement that does not block job-site workflows.
+- [x] Avoid ads on critical save/delete/report actions.
+- [x] Choose purchase approach, likely RevenueCat or platform-native IAP.
+- [x] Add one-time ad-free purchase.
+- [x] Add restore purchase support.
+- [x] Store ad-free entitlement locally after purchase validation.
+- [x] Hide ads for ad-free users.
+- [x] Add tests or mocks around ad-free entitlement logic.
 
 ## Phase 6: Privacy, Backup, And Data Safety
 
