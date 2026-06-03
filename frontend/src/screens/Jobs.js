@@ -11,6 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { deleteJob, listJobs } from '../data/jobs';
 import { cleanupStoredJobPhotos } from '../data/photos';
+import { exportJobsBackup } from '../data/backups';
 import {
   STATUS_FILTERS,
   STATUS_META,
@@ -24,6 +25,8 @@ export default function Jobs({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupError, setBackupError] = useState('');
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -65,6 +68,22 @@ export default function Jobs({ navigation }) {
         },
       ]
     );
+  };
+
+  const handleExportBackup = async () => {
+    setBackupLoading(true);
+    setBackupError('');
+    try {
+      const latestJobs = await listJobs();
+      await exportJobsBackup(latestJobs);
+      setJobs(latestJobs);
+    } catch (err) {
+      const message = 'Job backup could not be created or shared on this device.';
+      setBackupError(message);
+      Alert.alert('Backup Error', message);
+    } finally {
+      setBackupLoading(false);
+    }
   };
   const stats = useMemo(() => {
     return jobs.reduce(
@@ -217,7 +236,18 @@ export default function Jobs({ navigation }) {
         >
           <Text style={styles.addBtnText}>+ Add New Job</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.backupBtn, backupLoading && styles.disabledBtn]}
+          onPress={handleExportBackup}
+          activeOpacity={0.8}
+          disabled={backupLoading}
+        >
+          <Text style={styles.backupBtnText}>
+            {backupLoading ? 'Exporting...' : 'Export Backup'}
+          </Text>
+        </TouchableOpacity>
       </View>
+      {backupError ? <Text style={styles.backupError}>{backupError}</Text> : null}
 
       <FlatList
         data={visibleJobs}
@@ -259,7 +289,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   addBtn: {
-    flex: 1,
+    flex: 1.25,
     backgroundColor: '#1565C0',
     borderRadius: 12,
     paddingVertical: 15,
@@ -274,6 +304,30 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
+  },
+  backupBtn: {
+    flex: 1,
+    backgroundColor: '#f3f8ff',
+    borderWidth: 1,
+    borderColor: '#2196F3',
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backupBtnText: {
+    color: '#1565C0',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  disabledBtn: {
+    opacity: 0.65,
+  },
+  backupError: {
+    color: '#c62828',
+    fontSize: 13,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   summaryCard: {
     backgroundColor: '#fff',

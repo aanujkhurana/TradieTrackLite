@@ -10,6 +10,8 @@ import fc from 'fast-check';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before any imports that trigger module resolution
@@ -32,12 +34,26 @@ jest.mock('expo-notifications', () => ({
   scheduleNotificationAsync: jest.fn(),
   cancelScheduledNotificationAsync: jest.fn(),
 }));
+jest.mock('expo-print', () => ({
+  printToFileAsync: jest.fn(),
+}));
+jest.mock('expo-sharing', () => ({
+  isAvailableAsync: jest.fn(),
+  shareAsync: jest.fn(),
+}));
 jest.mock('expo-file-system', () => ({
   documentDirectory: 'file:///app/Documents/',
+  cacheDirectory: 'file:///app/Cache/',
+  EncodingType: {
+    Base64: 'base64',
+    UTF8: 'utf8',
+  },
   getInfoAsync: jest.fn(),
   makeDirectoryAsync: jest.fn(),
   copyAsync: jest.fn(),
   deleteAsync: jest.fn(),
+  readAsStringAsync: jest.fn(),
+  writeAsStringAsync: jest.fn(),
 }));
 jest.mock('@react-native-community/datetimepicker', () => {
   const React = require('react');
@@ -57,6 +73,8 @@ import {
   getReminderState,
   isReminderOverdue,
 } from '../utils/jobWorkflow';
+import { buildJobsBackupPayload } from '../data/backups';
+import { buildJobReportHtml } from '../data/reports';
 import CreateJob from '../screens/CreateJob';
 import JobDetail from '../screens/JobDetail';
 
@@ -250,6 +268,68 @@ describe('Local job workflow helpers', () => {
   });
 });
 
+describe('Local reports and backup helpers', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    FileSystem.readAsStringAsync.mockResolvedValue('photo-base64');
+  });
+
+  it('builds a local PDF report HTML document with job details and embedded photos', async () => {
+    const html = await buildJobReportHtml({
+      name: 'Fix tap',
+      customerName: 'Sarah',
+      customerPhone: '0400 123 456',
+      customerEmail: 'sarah@example.com',
+      customerNotes: 'Gate code 1234',
+      address: '1 Test St',
+      notes: 'Kitchen sink leak',
+      status: 'completed',
+      photos: ['file:///app/Documents/job-photos/photo-1.jpg'],
+      startDate: '2026-01-01T00:00:00.000Z',
+      endDate: '2026-01-01T02:30:00.000Z',
+    });
+
+    expect(html).toContain('Fix tap');
+    expect(html).toContain('Sarah');
+    expect(html).toContain('1 Test St');
+    expect(html).toContain('Completed');
+    expect(html).toContain('Kitchen sink leak');
+    expect(html).toContain('2h 30m');
+    expect(html).toContain('data:image/jpeg;base64,photo-base64');
+    expect(FileSystem.readAsStringAsync).toHaveBeenCalledWith(
+      'file:///app/Documents/job-photos/photo-1.jpg',
+      { encoding: 'base64' }
+    );
+  });
+
+  it('builds a manual backup payload for all local job records', () => {
+    const payload = buildJobsBackupPayload([
+      {
+        _id: 'job123',
+        name: 'Fix tap',
+        customerName: 'Sarah',
+        address: '1 Test St',
+        status: 'pending',
+        photos: ['file:///app/Documents/job-photos/photo-1.jpg'],
+      },
+    ], '2026-01-02T00:00:00.000Z');
+
+    expect(payload).toEqual(expect.objectContaining({
+      app: 'TradieTrack Lite',
+      version: 1,
+      exportedAt: '2026-01-02T00:00:00.000Z',
+    }));
+    expect(payload.jobs).toEqual([
+      expect.objectContaining({
+        id: 'job123',
+        name: 'Fix tap',
+        customerName: 'Sarah',
+        photos: ['file:///app/Documents/job-photos/photo-1.jpg'],
+      }),
+    ]);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // 10.4 — Unit tests for CreateJob screen
 // Validates: Requirements 1.4
@@ -333,6 +413,10 @@ describe('JobDetail screen', () => {
     FileSystem.makeDirectoryAsync.mockResolvedValue(undefined);
     FileSystem.copyAsync.mockResolvedValue(undefined);
     FileSystem.deleteAsync.mockResolvedValue(undefined);
+    FileSystem.readAsStringAsync.mockResolvedValue('photo-base64');
+    Print.printToFileAsync.mockResolvedValue({ uri: 'file:///app/Cache/report.pdf' });
+    Sharing.isAvailableAsync.mockResolvedValue(true);
+    Sharing.shareAsync.mockResolvedValue(undefined);
     Notifications.requestPermissionsAsync.mockResolvedValue({ status: 'granted' });
     Notifications.scheduleNotificationAsync.mockResolvedValue('notification-1');
     Notifications.cancelScheduledNotificationAsync.mockResolvedValue(undefined);
@@ -509,5 +593,35 @@ describe('JobDetail screen', () => {
     fireEvent.press(getByText('Email Customer'));
 
     expect(Linking.openURL).toHaveBeenCalledWith('mailto:sarah@example.com');
+  });
+
+  it('generates and shares a local PDF job report', async () => {
+    const jobWithDetails = {
+      ...baseJob,
+      customerName: 'Sarah',
+      address: '1 Test St',
+      notes: 'Kitchen sink leak',
+      photos: ['file:///app/Documents/job-photos/photo-1.jpg'],
+      startDate: '2026-01-01T00:00:00.000Z',
+      endDate: '2026-01-01T02:00:00.000Z',
+    };
+
+    const { getByText } = render(
+      <JobDetail route={{ params: { job: jobWithDetails } }} navigation={mockNavigation} />
+    );
+
+    await act(async () => {
+      fireEvent.press(getByText('Share Job Report'));
+    });
+
+    await waitFor(() => {
+      expect(Print.printToFileAsync).toHaveBeenCalledWith(expect.objectContaining({
+        html: expect.stringContaining('Kitchen sink leak'),
+      }));
+      expect(Sharing.shareAsync).toHaveBeenCalledWith(
+        'file:///app/Cache/report.pdf',
+        expect.objectContaining({ mimeType: 'application/pdf' })
+      );
+    });
   });
 });

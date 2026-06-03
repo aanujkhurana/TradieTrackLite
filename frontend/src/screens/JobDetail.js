@@ -8,7 +8,6 @@ import {
   FlatList,
   ScrollView,
   Alert,
-  Share,
   Linking,
   StyleSheet,
   Dimensions,
@@ -24,6 +23,7 @@ import {
   storeJobPhoto,
 } from '../data/photos';
 import { STATUS_OPTIONS, getReminderState } from '../utils/jobWorkflow';
+import { shareJobReport } from '../data/reports';
 import { formatLoggedDuration } from '../utils/time';
 
 const PHOTO_SIZE = Math.floor((Dimensions.get('window').width - 32 - 8) / 3);
@@ -56,6 +56,8 @@ export default function JobDetail({ route, navigation }) {
     job.reminderNotificationId || null
   );
   const [activePicker, setActivePicker] = useState(null); // startDate | endDate | reminder
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState('');
   const totalLoggedTime = useMemo(
     () => formatLoggedDuration(startDate, endDate),
     [startDate, endDate]
@@ -316,25 +318,32 @@ export default function JobDetail({ route, navigation }) {
         ? new Date()
         : undefined;
 
-  const shareJobSummary = async () => {
-    const summary = [
-      name.trim(),
-      customerName.trim() ? `Customer: ${customerName.trim()}` : null,
-      customerPhone.trim() ? `Phone: ${customerPhone.trim()}` : null,
-      customerEmail.trim() ? `Email: ${customerEmail.trim()}` : null,
-      address.trim() ? `Address: ${address.trim()}` : null,
-      `Status: ${status}`,
-      startDate ? `Started: ${startDate.toLocaleString()}` : null,
-      endDate ? `Ended: ${endDate.toLocaleString()}` : null,
-      `Logged: ${totalLoggedTime}`,
-      reminder ? `Reminder: ${reminder.toLocaleString()}` : null,
-      notes ? `Notes: ${notes}` : null,
-    ].filter(Boolean).join('\n');
+  const getReportJob = () => ({
+    ...job,
+    name: name.trim() || 'Untitled job',
+    customerName: customerName.trim(),
+    customerPhone: customerPhone.trim(),
+    customerEmail: customerEmail.trim(),
+    customerNotes,
+    address: address.trim(),
+    notes,
+    status,
+    photos,
+    startDate: startDate ? startDate.toISOString() : null,
+    endDate: endDate ? endDate.toISOString() : null,
+  });
 
+  const shareCurrentJobReport = async () => {
+    setReportLoading(true);
+    setReportError('');
     try {
-      await Share.share({ message: summary });
+      await shareJobReport(getReportJob());
     } catch (err) {
-      Alert.alert('Share Error', 'Job summary could not be shared.');
+      const message = 'Job report could not be generated or shared on this device.';
+      setReportError(message);
+      Alert.alert('Report Error', message);
+    } finally {
+      setReportLoading(false);
     }
   };
 
@@ -572,9 +581,17 @@ export default function JobDetail({ route, navigation }) {
         )}
       </View>
 
-      <TouchableOpacity style={styles.pdfBtn} onPress={shareJobSummary} activeOpacity={0.8}>
-        <Text style={styles.pdfBtnText}>Share Job Summary</Text>
+      <TouchableOpacity
+        style={[styles.pdfBtn, reportLoading && styles.disabledBtn]}
+        onPress={shareCurrentJobReport}
+        activeOpacity={0.8}
+        disabled={reportLoading}
+      >
+        <Text style={styles.pdfBtnText}>
+          {reportLoading ? 'Building Report...' : 'Share Job Report'}
+        </Text>
       </TouchableOpacity>
+      {reportError ? <Text style={styles.reportError}>{reportError}</Text> : null}
 
       <TouchableOpacity style={styles.saveBtn} onPress={save} activeOpacity={0.8}>
         <Text style={styles.saveBtnText}>Save</Text>
@@ -808,6 +825,15 @@ const styles = StyleSheet.create({
     color: '#6a1b9a',
     fontSize: 16,
     fontWeight: '700',
+  },
+  disabledBtn: {
+    opacity: 0.65,
+  },
+  reportError: {
+    color: '#c62828',
+    fontSize: 13,
+    marginTop: 8,
+    textAlign: 'center',
   },
   saveBtn: {
     backgroundColor: '#1565C0',

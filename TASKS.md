@@ -53,12 +53,12 @@ Backend/auth/cloud work from earlier phases is now considered legacy unless a ta
 
 ## Phase 4: Local Reports And Export
 
-- [ ] Replace backend PDF generation with local report generation.
-- [ ] Evaluate Expo Print, Expo Sharing, or a lightweight HTML-to-PDF approach.
-- [ ] Include job title, customer details, address, status, notes, photos, start/end dates, and total logged time in reports.
-- [ ] Share reports through the device share sheet.
-- [ ] Add clear loading and error states for report generation.
-- [ ] Add a manual data export option for backup.
+- [x] Replace backend PDF generation with local report generation.
+- [x] Evaluate Expo Print, Expo Sharing, or a lightweight HTML-to-PDF approach.
+- [x] Include job title, customer details, address, status, notes, photos, start/end dates, and total logged time in reports.
+- [x] Share reports through the device share sheet.
+- [x] Add clear loading and error states for report generation.
+- [x] Add a manual data export option for backup.
 - [ ] Add a manual data import option only if it stays simple and reliable.
 
 ## Phase 5: Ads And One-Time Ad-Free Purchase
