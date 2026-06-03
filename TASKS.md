@@ -85,12 +85,12 @@ Backend/auth/cloud work from earlier phases is now considered legacy unless a ta
 
 ## Phase 7: Legacy Backend Cleanup
 
-- [ ] Decide whether to remove `backend/` entirely for the MVP.
-- [ ] If keeping backend, mark it as optional/legacy in docs.
-- [ ] Remove frontend dependency on `API_URL` for normal job workflows.
-- [ ] Remove auth screens and auth context if no longer needed.
-- [ ] Remove backend-only production tasks from the active roadmap.
-- [ ] Keep useful tests or fixtures only if they still help the local-first app.
+- [x] Decide whether to remove `backend/` entirely for the MVP.
+- [x] If keeping backend, mark it as optional/legacy in docs.
+- [x] Remove frontend dependency on `API_URL` for normal job workflows.
+- [x] Remove auth screens and auth context if no longer needed.
+- [x] Remove backend-only production tasks from the active roadmap.
+- [x] Keep useful tests or fixtures only if they still help the local-first app.
 
 ## Phase 8: Mobile Polish
 

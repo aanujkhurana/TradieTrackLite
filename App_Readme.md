@@ -1,5 +1,7 @@
 # TradieTrack Lite - Build Specification (LLM Ready)
 
+> Legacy note: this older build specification reflects the earlier backend/API direction. The active roadmap is `TASKS.md`, and the current MVP is local-first with no authentication, no required backend, local photos/reminders/reports, ads for free users, and a one-time ad-free purchase.
+
 ## Overview
 TradieTrack Lite is a simple mobile app for tradies (plumbers, handymen, cleaners) to track jobs, capture photos, set reminders, and export job reports as PDFs.
 

@@ -21,9 +21,9 @@ This direction intentionally avoids cloud sync, user accounts, subscriptions, te
 
 ## Current Repository State
 
-The codebase currently contains a React Native/Expo frontend and an Express/MongoDB backend from an earlier cloud/API direction. Recent work added authentication and user-scoped backend jobs, but the product direction has now changed.
+The codebase contains a React Native/Expo frontend and an Express/MongoDB backend from an earlier cloud/API direction. The active app is now local-first: normal job workflows use on-device storage and do not require API credentials, authentication, MongoDB, or a running backend.
 
-Treat backend/auth/cloud storage code as legacy unless a task explicitly says otherwise. The next implementation work should move normal app usage back to local mobile storage and remove the need for a backend during everyday use.
+Treat backend/auth/cloud storage code as legacy unless a task explicitly says otherwise. Frontend auth screens, auth context, and `API_URL` configuration have been removed from the normal app surface.
 
 ## What The App Should Do
 
@@ -52,20 +52,20 @@ Treat backend/auth/cloud storage code as legacy unless a task explicitly says ot
 - Ads SDK, likely Google AdMob
 - In-app purchase SDK, likely RevenueCat or platform-native IAP
 
-### Legacy Backend
+### Optional Legacy Backend
 
 - Node.js
 - Express
 - MongoDB and Mongoose
 - Puppeteer for server-side PDF generation
 
-The backend may remain useful for tests, experiments, or future optional backup features, but it should not be required for the local-first MVP.
+The backend is optional legacy code. It may remain useful for old tests, experiments, or future optional backup features, but it is not required for the local-first MVP.
 
 ## Project Structure
 
 ```text
 .
-├── backend/                  # Legacy API from earlier backend-first direction
+├── backend/                  # Optional legacy API from earlier backend-first direction
 │   ├── index.js
 │   ├── models/
 │   └── tests/
@@ -106,9 +106,9 @@ npm install
 npm start
 ```
 
-### Backend
+### Optional Legacy Backend
 
-The backend is currently legacy. Run it only when working on existing backend tests or while removing/migrating backend-dependent features.
+The backend is optional legacy code. Run it only when working on existing backend tests, comparing legacy behavior, or intentionally experimenting with future optional backend features.
 
 ```sh
 cd backend
@@ -119,7 +119,7 @@ npm run dev
 
 ## Local-First Storage Plan
 
-The app should move toward this model:
+The app uses this local-first model:
 
 - Jobs stored in a local SQLite database.
 - Photos copied into app-owned local file storage.
@@ -196,4 +196,4 @@ The app should clearly communicate:
 
 ## Next Build Priority
 
-Start by replacing backend-backed job flows with local mobile storage. After that, move photos into app-local storage, remove login from the normal app flow, and then add ads plus a one-time ad-free purchase.
+Continue mobile polish and release readiness for the local-first app: first-launch ergonomics, empty states, permissions, accessibility, app icon/splash, app-store copy, privacy labels, screenshots, and fresh-install/update testing.
