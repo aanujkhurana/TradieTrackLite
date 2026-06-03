@@ -76,6 +76,7 @@ The backend may remain useful for tests, experiments, or future optional backup 
 │       ├── utils/
 │       └── __tests__/
 ├── AGENTS.md
+├── PRIVACY_POLICY.md
 ├── TASKS.md
 └── README.md
 ```
@@ -125,7 +126,13 @@ The app should move toward this model:
 - Job records store local photo paths, not remote URLs.
 - Reminders scheduled locally on the device.
 - Reports generated locally or assembled into shareable device files.
-- Optional manual export/backup can come later.
+- Manual backup export through the device share sheet.
+
+## Privacy And Data Safety
+
+The app includes an in-app device storage note and a backup reminder on the Jobs screen. Normal job workflows do not send job records, customer details, reminders, photos, or reports to a backend.
+
+Use [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for app store privacy policy text. It documents local storage, delete-app data risk, manual exports, non-personalized ad requests, one-time purchase validation, and the current no-analytics stance.
 
 ## Monetization Plan
 

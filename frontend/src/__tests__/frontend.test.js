@@ -103,6 +103,10 @@ import {
 import { buildJobsBackupPayload } from '../data/backups';
 import { buildJobReportHtml } from '../data/reports';
 import {
+  DATA_SAFETY_MESSAGES,
+  getDataSafetySummary,
+} from '../privacy/dataSafety';
+import {
   AD_FREE_ENTITLEMENT_ID,
   AD_FREE_PRODUCT_ID,
   getAdMobBannerUnitId,
@@ -362,6 +366,8 @@ describe('Local reports and backup helpers', () => {
       version: 1,
       exportedAt: '2026-01-02T00:00:00.000Z',
     }));
+    expect(payload.note).toContain(DATA_SAFETY_MESSAGES.localStorageNote);
+    expect(payload.note).toContain(DATA_SAFETY_MESSAGES.deleteWarning);
     expect(payload.jobs).toEqual([
       expect.objectContaining({
         id: 'job123',
@@ -370,6 +376,23 @@ describe('Local reports and backup helpers', () => {
         photos: ['file:///app/Documents/job-photos/photo-1.jpg'],
       }),
     ]);
+  });
+});
+
+describe('Privacy and data safety messaging', () => {
+  it('summarizes local storage, app deletion risk, and backup reminders', () => {
+    expect(getDataSafetySummary()).toEqual([
+      DATA_SAFETY_MESSAGES.localStorageNote,
+      DATA_SAFETY_MESSAGES.deleteWarning,
+      DATA_SAFETY_MESSAGES.backupReminder,
+    ]);
+  });
+
+  it('keeps backend and analytics privacy promises explicit', () => {
+    expect(DATA_SAFETY_MESSAGES.backendNotice).toContain('do not send');
+    expect(DATA_SAFETY_MESSAGES.backendNotice).toContain('backend');
+    expect(DATA_SAFETY_MESSAGES.analyticsNotice).toContain('not enabled');
+    expect(DATA_SAFETY_MESSAGES.analyticsNotice).toContain('anonymous and minimal');
   });
 });
 

@@ -14,6 +14,7 @@ import { cleanupStoredJobPhotos } from '../data/photos';
 import { exportJobsBackup } from '../data/backups';
 import AdBanner from '../components/AdBanner';
 import { useMonetization } from '../monetization/MonetizationContext';
+import { DATA_SAFETY_MESSAGES } from '../privacy/dataSafety';
 import {
   STATUS_FILTERS,
   STATUS_META,
@@ -168,6 +169,21 @@ export default function Jobs({ navigation }) {
     </View>
   );
 
+  const renderDataSafetyNote = () => (
+    <View style={styles.dataSafetyCard}>
+      <Text style={styles.dataSafetyTitle}>Device Storage</Text>
+      <Text style={styles.dataSafetyText}>
+        {DATA_SAFETY_MESSAGES.localStorageNote}
+      </Text>
+      <Text style={styles.dataSafetyText}>
+        {DATA_SAFETY_MESSAGES.deleteWarning}
+      </Text>
+      <Text style={styles.dataSafetyReminder}>
+        {DATA_SAFETY_MESSAGES.backupReminder}
+      </Text>
+    </View>
+  );
+
   const renderItem = ({ item }) => {
     const statusMeta = STATUS_META[item.status] || STATUS_META.pending;
     const isCompleted = item.status === 'completed';
@@ -269,6 +285,7 @@ export default function Jobs({ navigation }) {
         onRefresh={onRefresh}
         ListHeaderComponent={
           <>
+            {renderDataSafetyNote()}
             {renderSummary()}
             {renderFilters()}
             <AdBanner placement="jobs-list" />
@@ -356,6 +373,32 @@ const styles = StyleSheet.create({
     color: '#1565C0',
     fontSize: 13,
     fontWeight: '800',
+  },
+  dataSafetyCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#cddceb',
+  },
+  dataSafetyTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1f2937',
+    marginBottom: 6,
+  },
+  dataSafetyText: {
+    color: '#4b5563',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  dataSafetyReminder: {
+    color: '#1565C0',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
   },
   summaryCard: {
     backgroundColor: '#fff',

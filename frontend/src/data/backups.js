@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { DATA_SAFETY_MESSAGES } from '../privacy/dataSafety';
 
 const BACKUP_VERSION = 1;
 
@@ -33,7 +34,7 @@ export function buildJobsBackupPayload(jobs, exportedAt = new Date().toISOString
     app: 'TradieTrack Lite',
     version: BACKUP_VERSION,
     exportedAt,
-    note: 'Job records are local-first. Photo entries are local file paths on this device.',
+    note: `${DATA_SAFETY_MESSAGES.localStorageNote} Photo entries are local file paths on this device. ${DATA_SAFETY_MESSAGES.deleteWarning}`,
     jobs: jobs.map(toBackupJob),
   };
 }

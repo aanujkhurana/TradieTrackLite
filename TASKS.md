@@ -75,13 +75,13 @@ Backend/auth/cloud work from earlier phases is now considered legacy unless a ta
 
 ## Phase 6: Privacy, Backup, And Data Safety
 
-- [ ] Add an in-app note that job data is stored on this device.
-- [ ] Warn that deleting the app may delete app data.
-- [ ] Add a simple backup/export reminder.
-- [ ] Add a privacy policy for app stores.
-- [ ] Make sure no unnecessary personal data is sent to a backend.
-- [ ] Remove or disable analytics unless explicitly needed.
-- [ ] If analytics are added later, keep them anonymous and minimal.
+- [x] Add an in-app note that job data is stored on this device.
+- [x] Warn that deleting the app may delete app data.
+- [x] Add a simple backup/export reminder.
+- [x] Add a privacy policy for app stores.
+- [x] Make sure no unnecessary personal data is sent to a backend.
+- [x] Remove or disable analytics unless explicitly needed.
+- [x] If analytics are added later, keep them anonymous and minimal.
 
 ## Phase 7: Legacy Backend Cleanup
 
