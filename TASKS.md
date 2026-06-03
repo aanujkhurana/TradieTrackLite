@@ -105,11 +105,11 @@ Backend/auth/cloud work from earlier phases is now considered legacy unless a ta
 
 ## Phase 9: Release Readiness
 
-- [ ] Add app store description focused on no-login local job tracking.
+- [x] Add app store description focused on no-login local job tracking.
 - [ ] Add screenshots.
-- [ ] Add privacy labels.
-- [ ] Add ad disclosure.
-- [ ] Add purchase restore instructions.
+- [x] Add privacy labels.
+- [x] Add ad disclosure.
+- [x] Add purchase restore instructions.
 - [ ] Test fresh install.
 - [ ] Test app update with existing local data.
 - [ ] Test delete/reinstall data behavior.

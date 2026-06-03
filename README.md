@@ -134,6 +134,18 @@ The app includes an in-app device storage note and a backup reminder on the Jobs
 
 Use [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for app store privacy policy text. It documents local storage, delete-app data risk, manual exports, non-personalized ad requests, one-time purchase validation, and the current no-analytics stance.
 
+## Release Readiness
+
+Store submission drafts and release QA notes live in `release/`:
+
+- [App store listing draft](release/APP_STORE_LISTING.md)
+- [Screenshot guidance](release/SCREENSHOTS.md)
+- [Privacy labels and data safety draft](release/PRIVACY_LABELS.md)
+- [Ads and purchase disclosure](release/MONETIZATION_DISCLOSURE.md)
+- [Release test plan](release/RELEASE_TEST_PLAN.md)
+
+These files are release-prep materials, not proof of store submission. Final screenshots, store privacy answers, production ad settings, purchase products, signing, and Android/iOS release artifacts must be verified in the relevant store and build tooling before launch.
+
 ## Monetization Plan
 
 Free version:

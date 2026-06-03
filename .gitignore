@@ -41,6 +41,11 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Expo local state
+.expo/
+**/.expo/
+frontend/.expo/
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 
