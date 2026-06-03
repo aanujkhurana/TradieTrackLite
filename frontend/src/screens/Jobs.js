@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   FlatList,
@@ -30,13 +31,23 @@ export default function Jobs({ navigation }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupError, setBackupError] = useState('');
+  const [initializing, setInitializing] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const hasLoadedJobs = useRef(false);
   const { isAdFree } = useMonetization();
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async ({ showLoader = false } = {}) => {
+    if (showLoader || !hasLoadedJobs.current) {
+      setInitializing(true);
+    }
+    setLoadError('');
     try {
       setJobs(await listJobs());
+      hasLoadedJobs.current = true;
     } catch (err) {
-      Alert.alert('Local Storage Error', 'Jobs could not be loaded from this device.');
+      setLoadError('Jobs could not be loaded from this device. No internet is required, so try reopening the local job list.');
+    } finally {
+      setInitializing(false);
     }
   }, []);
   const onRefresh = useCallback(async () => {
@@ -47,7 +58,7 @@ export default function Jobs({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      fetchJobs();
+      fetchJobs({ showLoader: !hasLoadedJobs.current });
     }, [fetchJobs])
   );
 
@@ -66,7 +77,10 @@ export default function Jobs({ navigation }) {
               await cleanupStoredJobPhotos(job.photos);
               setJobs((prev) => prev.filter((j) => j._id !== job._id));
             } catch (err) {
-              Alert.alert('Local Storage Error', 'Job could not be deleted from this device.');
+              Alert.alert(
+                'Local Storage Error',
+                'Job could not be deleted from this device. Your job list is stored locally, so try again when the app is ready.'
+              );
             }
           },
         },
@@ -82,7 +96,7 @@ export default function Jobs({ navigation }) {
       await exportJobsBackup(latestJobs);
       setJobs(latestJobs);
     } catch (err) {
-      const message = 'Job backup could not be created or shared on this device.';
+      const message = 'Backup could not be created or shared from this device. Your jobs are still saved locally.';
       setBackupError(message);
       Alert.alert('Backup Error', message);
     } finally {
@@ -184,6 +198,63 @@ export default function Jobs({ navigation }) {
     </View>
   );
 
+  const renderEmptyState = () => {
+    if (initializing) {
+      return (
+        <View style={styles.stateCard}>
+          <ActivityIndicator color="#1565C0" />
+          <Text style={styles.stateTitle}>Opening your local job list</Text>
+          <Text style={styles.stateText}>
+            Setting up the on-device database. This works without internet.
+          </Text>
+        </View>
+      );
+    }
+
+    if (loadError) {
+      return (
+        <View style={styles.stateCard}>
+          <Text style={styles.stateTitle}>Could not open jobs</Text>
+          <Text style={styles.stateText}>{loadError}</Text>
+          <TouchableOpacity
+            style={styles.stateActionBtn}
+            onPress={() => fetchJobs({ showLoader: true })}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.stateActionText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (jobs.length === 0) {
+      return (
+        <View style={styles.stateCard}>
+          <Text style={styles.stateTitle}>No jobs yet</Text>
+          <Text style={styles.stateText}>
+            Add your first job with the customer, address, notes, photos, and reminders kept on this device.
+          </Text>
+          <TouchableOpacity
+            style={styles.stateActionBtn}
+            onPress={() => navigation.navigate('CreateJob')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.stateActionText}>Add First Job</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.stateCard}>
+        <Text style={styles.stateTitle}>No matching jobs</Text>
+        <Text style={styles.stateText}>
+          Try another status filter or search term.
+        </Text>
+      </View>
+    );
+  };
+
   const renderItem = ({ item }) => {
     const statusMeta = STATUS_META[item.status] || STATUS_META.pending;
     const isCompleted = item.status === 'completed';
@@ -249,17 +320,18 @@ export default function Jobs({ navigation }) {
     <View style={styles.container}>
       <View style={styles.topActions}>
         <TouchableOpacity
-          style={styles.addBtn}
+          style={[styles.addBtn, initializing && styles.disabledBtn]}
           onPress={() => navigation.navigate('CreateJob')}
           activeOpacity={0.8}
+          disabled={initializing}
         >
           <Text style={styles.addBtnText}>+ Add New Job</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.backupBtn, backupLoading && styles.disabledBtn]}
+          style={[styles.backupBtn, (backupLoading || initializing) && styles.disabledBtn]}
           onPress={handleExportBackup}
           activeOpacity={0.8}
-          disabled={backupLoading}
+          disabled={backupLoading || initializing}
         >
           <Text style={styles.backupBtnText}>
             {backupLoading ? 'Exporting...' : 'Export Backup'}
@@ -292,13 +364,7 @@ export default function Jobs({ navigation }) {
           </>
         }
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            {jobs.length === 0
-              ? 'No jobs yet. Tap "+ Add New Job" to get started.'
-              : 'No jobs match this filter.'}
-          </Text>
-        }
+        ListEmptyComponent={renderEmptyState}
       />
     </View>
   );
@@ -315,15 +381,20 @@ const styles = StyleSheet.create({
   },
   topActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginBottom: 16,
   },
   addBtn: {
-    flex: 1.25,
+    flexGrow: 1.25,
+    flexBasis: 170,
+    minHeight: 50,
     backgroundColor: '#1565C0',
     borderRadius: 12,
     paddingVertical: 15,
+    paddingHorizontal: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -334,9 +405,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
+    textAlign: 'center',
   },
   backupBtn: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 150,
+    minHeight: 50,
     backgroundColor: '#f3f8ff',
     borderWidth: 1,
     borderColor: '#2196F3',
@@ -349,6 +423,7 @@ const styles = StyleSheet.create({
     color: '#1565C0',
     fontSize: 15,
     fontWeight: '700',
+    textAlign: 'center',
   },
   disabledBtn: {
     opacity: 0.65,
@@ -368,6 +443,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
     marginBottom: 12,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   adFreeBtnText: {
     color: '#1565C0',
@@ -421,7 +498,7 @@ const styles = StyleSheet.create({
   },
   summaryChip: {
     flexGrow: 1,
-    flexBasis: '22%',
+    flexBasis: 118,
     backgroundColor: '#f6f8fb',
     borderRadius: 8,
     paddingVertical: 8,
@@ -463,6 +540,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 15,
+    minHeight: 48,
   },
   filterRow: {
     flexDirection: 'row',
@@ -471,7 +549,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   filterBtn: {
-    minHeight: 42,
+    minHeight: 48,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
@@ -495,6 +573,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
+    minHeight: 72,
     borderWidth: 1,
     borderColor: '#e4e9f0',
   },
@@ -538,6 +617,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+    textAlign: 'center',
   },
   overdueBadge: {
     backgroundColor: '#fff3e0',
@@ -554,9 +634,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   deleteBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#ffe9e7',
     alignItems: 'center',
     justifyContent: 'center',
@@ -574,6 +654,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     alignItems: 'flex-end',
     minWidth: 96,
+    maxWidth: 124,
   },
   timeLoggedLabel: {
     fontSize: 11,
@@ -586,10 +667,43 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 2,
   },
-  empty: {
+  stateCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d9e0e8',
+    borderRadius: 12,
+    padding: 18,
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  stateTitle: {
+    color: '#1f2937',
+    fontSize: 17,
+    fontWeight: '800',
+    marginTop: 10,
     textAlign: 'center',
-    color: '#7b8794',
-    marginTop: 52,
+  },
+  stateText: {
+    color: '#4b5563',
     fontSize: 15,
+    lineHeight: 21,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  stateActionBtn: {
+    minHeight: 50,
+    marginTop: 16,
+    backgroundColor: '#1565C0',
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stateActionText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
   },
 });

@@ -94,14 +94,14 @@ Backend/auth/cloud work from earlier phases is now considered legacy unless a ta
 
 ## Phase 8: Mobile Polish
 
-- [ ] Make first launch go straight to jobs.
-- [ ] Add a helpful empty state.
-- [ ] Keep buttons large and job-site friendly.
-- [ ] Improve offline/no-permission messages.
-- [ ] Add loading states for local database initialization.
-- [ ] Check small-screen layout for all forms.
-- [ ] Check large-text accessibility.
-- [ ] Add app icon and splash screen.
+- [x] Make first launch go straight to jobs.
+- [x] Add a helpful empty state.
+- [x] Keep buttons large and job-site friendly.
+- [x] Improve offline/no-permission messages.
+- [x] Add loading states for local database initialization.
+- [x] Check small-screen layout for all forms.
+- [x] Check large-text accessibility.
+- [x] Add app icon and splash screen.
 
 ## Phase 9: Release Readiness
 

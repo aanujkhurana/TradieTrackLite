@@ -20,8 +20,11 @@ export default function CreateJob({ navigation }) {
   const [notes, setNotes] = useState('');
   const [nameError, setNameError] = useState('');
   const [addressError, setAddressError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
+    if (saving) return;
+
     let valid = true;
     if (!name.trim()) {
       setNameError('Job name is required');
@@ -38,6 +41,7 @@ export default function CreateJob({ navigation }) {
     if (!valid) return;
 
     try {
+      setSaving(true);
       await createJob({
         name: name.trim(),
         customerName: customerName.trim(),
@@ -52,8 +56,13 @@ export default function CreateJob({ navigation }) {
       if (err.code === 'VALIDATION_ERROR') {
         Alert.alert('Validation Error', err.message);
       } else {
-        Alert.alert('Local Storage Error', 'Job could not be saved on this device.');
+        Alert.alert(
+          'Local Storage Error',
+          'Job could not be saved on this device. No internet is required, so try again from the local job form.'
+        );
       }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -138,8 +147,13 @@ export default function CreateJob({ navigation }) {
         />
       </View>
 
-      <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit} activeOpacity={0.8}>
-        <Text style={styles.saveBtnText}>Save Job</Text>
+      <TouchableOpacity
+        style={[styles.saveBtn, saving && styles.disabledBtn]}
+        onPress={handleSubmit}
+        activeOpacity={0.8}
+        disabled={saving}
+      >
+        <Text style={styles.saveBtnText}>{saving ? 'Saving Job...' : 'Save Job'}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -160,6 +174,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e4e9f0',
     padding: 14,
+    width: '100%',
   },
   formTitle: {
     fontSize: 18,
@@ -187,12 +202,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
+    minHeight: 50,
   },
   inputError: {
     borderColor: '#e53935',
   },
   notesInput: {
-    height: 100,
+    minHeight: 104,
     textAlignVertical: 'top',
   },
   error: {
@@ -204,7 +220,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#1565C0',
     borderRadius: 10,
     paddingVertical: 16,
+    paddingHorizontal: 16,
+    minHeight: 54,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 16,
     shadowColor: '#000',
     shadowOpacity: 0.1,
@@ -216,5 +235,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
+    textAlign: 'center',
+  },
+  disabledBtn: {
+    opacity: 0.65,
   },
 });

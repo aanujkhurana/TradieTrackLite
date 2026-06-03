@@ -58,6 +58,7 @@ export default function JobDetail({ route, navigation }) {
   const [activePicker, setActivePicker] = useState(null); // startDate | endDate | reminder
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState('');
+  const [saving, setSaving] = useState(false);
   const totalLoggedTime = useMemo(
     () => formatLoggedDuration(startDate, endDate),
     [startDate, endDate]
@@ -76,7 +77,22 @@ export default function JobDetail({ route, navigation }) {
     } else if (err.code === 'VALIDATION_ERROR') {
       Alert.alert('Validation Error', err.message);
     } else {
-      Alert.alert('Local Storage Error', 'Job changes could not be saved on this device.');
+      Alert.alert(
+        'Local Storage Error',
+        'Job changes could not be saved on this device. No internet is required, so try again from this local job screen.'
+      );
+    }
+  };
+  const openDeviceSettings = () => {
+    if (Linking.openSettings) {
+      Linking.openSettings();
+    }
+  };
+  const openCustomerLink = async (url, fallbackTitle, fallbackMessage) => {
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(fallbackTitle, fallbackMessage);
     }
   };
   const callCustomer = async () => {
@@ -86,7 +102,11 @@ export default function JobDetail({ route, navigation }) {
       return;
     }
 
-    await Linking.openURL(`tel:${dialablePhone}`);
+    await openCustomerLink(
+      `tel:${dialablePhone}`,
+      'Call Unavailable',
+      'This device could not start a phone call. The job details are still saved locally.'
+    );
   };
   const messageCustomer = async () => {
     const dialablePhone = customerPhone.replace(/[^\d+]/g, '');
@@ -95,7 +115,11 @@ export default function JobDetail({ route, navigation }) {
       return;
     }
 
-    await Linking.openURL(`sms:${dialablePhone}`);
+    await openCustomerLink(
+      `sms:${dialablePhone}`,
+      'Message Unavailable',
+      'This device could not start a text message. The job details are still saved locally.'
+    );
   };
   const emailCustomer = async () => {
     const email = customerEmail.trim();
@@ -104,9 +128,15 @@ export default function JobDetail({ route, navigation }) {
       return;
     }
 
-    await Linking.openURL(`mailto:${email}`);
+    await openCustomerLink(
+      `mailto:${email}`,
+      'Email Unavailable',
+      'This device could not start an email. The job details are still saved locally.'
+    );
   };
   const save = async () => {
+    if (saving) return;
+
     if (!name.trim() || !address.trim()) {
       Alert.alert('Validation Error', 'Job name and address are required.');
       return;
@@ -123,6 +153,7 @@ export default function JobDetail({ route, navigation }) {
     }
 
     try {
+      setSaving(true);
       const nextReminderIso = reminder ? reminder.toISOString() : null;
       const nextReminderNotificationId = await prepareReminderNotification(nextReminderIso);
 
@@ -151,6 +182,8 @@ export default function JobDetail({ route, navigation }) {
       navigation.goBack();
     } catch (err) {
       handleStorageError(err);
+    } finally {
+      setSaving(false);
     }
   };
   // ── Photo capture (9.3) ───────────────────────────────────────────────────
@@ -160,9 +193,12 @@ export default function JobDetail({ route, navigation }) {
       const { status: permStatus } = await ImagePicker.requestCameraPermissionsAsync();
       if (permStatus !== 'granted') {
         Alert.alert(
-          'Camera Permission Required',
-          'Please enable camera access in your device Settings to add photos.',
-          [{ text: 'OK' }]
+          'Camera Access Needed',
+          'Job photos stay on this device. Enable camera access in Settings to add photos while on site.',
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Open Settings', onPress: openDeviceSettings },
+          ]
         );
         return;
       }
@@ -187,7 +223,10 @@ export default function JobDetail({ route, navigation }) {
         }
       }
     } catch (err) {
-      Alert.alert('Photo Storage Error', 'Photo could not be saved on this device.');
+      Alert.alert(
+        'Photo Storage Error',
+        'Photo could not be saved in app storage on this device. Try again after checking local storage space and camera access.'
+      );
     }
   };
 
@@ -207,7 +246,10 @@ export default function JobDetail({ route, navigation }) {
               await deleteStoredJobPhoto(uri);
               setPhotos(nextPhotos);
             } catch (err) {
-              Alert.alert('Photo Storage Error', 'Photo file could not be removed from this device.');
+              Alert.alert(
+                'Photo Storage Error',
+                'Photo file could not be removed from local app storage on this device.'
+              );
             }
           },
         },
@@ -236,8 +278,11 @@ export default function JobDetail({ route, navigation }) {
     if (permStatus !== 'granted') {
       Alert.alert(
         'Notifications Disabled',
-        'Reminder saved, but notifications are disabled. Enable them in Settings to receive alerts.',
-        [{ text: 'OK' }]
+        'Reminder saved locally, but notifications are disabled. Enable them in Settings to receive alerts.',
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Open Settings', onPress: openDeviceSettings },
+        ]
       );
       return null;
     }
@@ -253,7 +298,7 @@ export default function JobDetail({ route, navigation }) {
     } catch {
       Alert.alert(
         'Reminder Saved',
-        'Reminder saved, but the notification could not be scheduled on this device.'
+        'Reminder saved locally, but the notification could not be scheduled on this device.'
       );
       return null;
     }
@@ -470,7 +515,7 @@ export default function JobDetail({ route, navigation }) {
           onPress={() => setActivePicker('startDate')}
           activeOpacity={0.8}
         >
-          <View>
+          <View style={styles.infoRowText}>
             <Text style={styles.infoRowLabel}>Job Start</Text>
             <Text style={styles.infoRowValue}>{formatDateLabel(startDate)}</Text>
           </View>
@@ -482,7 +527,7 @@ export default function JobDetail({ route, navigation }) {
           onPress={() => setActivePicker('endDate')}
           activeOpacity={0.8}
         >
-          <View>
+          <View style={styles.infoRowText}>
             <Text style={styles.infoRowLabel}>Job End</Text>
             <Text style={styles.infoRowValue}>{formatDateLabel(endDate)}</Text>
           </View>
@@ -582,10 +627,10 @@ export default function JobDetail({ route, navigation }) {
       </View>
 
       <TouchableOpacity
-        style={[styles.pdfBtn, reportLoading && styles.disabledBtn]}
+        style={[styles.pdfBtn, (reportLoading || saving) && styles.disabledBtn]}
         onPress={shareCurrentJobReport}
         activeOpacity={0.8}
-        disabled={reportLoading}
+        disabled={reportLoading || saving}
       >
         <Text style={styles.pdfBtnText}>
           {reportLoading ? 'Building Report...' : 'Share Job Report'}
@@ -593,8 +638,13 @@ export default function JobDetail({ route, navigation }) {
       </TouchableOpacity>
       {reportError ? <Text style={styles.reportError}>{reportError}</Text> : null}
 
-      <TouchableOpacity style={styles.saveBtn} onPress={save} activeOpacity={0.8}>
-        <Text style={styles.saveBtnText}>Save</Text>
+      <TouchableOpacity
+        style={[styles.saveBtn, saving && styles.disabledBtn]}
+        onPress={save}
+        activeOpacity={0.8}
+        disabled={saving}
+      >
+        <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save'}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -638,18 +688,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
+    minHeight: 50,
   },
   notesInput: {
-    height: 100,
+    minHeight: 104,
     textAlignVertical: 'top',
   },
   statusRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 4,
   },
   statusBtn: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 120,
+    minHeight: 50,
     borderWidth: 2,
     borderRadius: 8,
     paddingVertical: 14,
@@ -659,6 +713,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#555',
+    textAlign: 'center',
   },
   statusBtnTextActive: {
     color: '#fff',
@@ -669,10 +724,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 12,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 8,
+    gap: 10,
+  },
+  infoRowText: {
+    flex: 1,
   },
   infoRowLabel: {
     fontSize: 12,
@@ -685,11 +745,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     fontWeight: '600',
+    flexShrink: 1,
   },
   infoRowAction: {
     color: '#1565C0',
     fontWeight: '700',
     fontSize: 13,
+    flexShrink: 0,
   },
   clearBtn: {
     marginTop: 10,
@@ -697,7 +759,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff3f2',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   clearBtnText: {
     color: '#c62828',
@@ -790,27 +854,36 @@ const styles = StyleSheet.create({
     borderColor: '#2196F3',
     borderRadius: 8,
     paddingVertical: 14,
+    paddingHorizontal: 14,
+    minHeight: 50,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 4,
   },
   actionBtnText: {
     color: '#1565C0',
     fontSize: 15,
     fontWeight: '600',
+    textAlign: 'center',
   },
   inlineActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 8,
   },
   inlineActionBtn: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 140,
+    minHeight: 50,
     backgroundColor: '#f3f8ff',
     borderWidth: 1,
     borderColor: '#2196F3',
     borderRadius: 8,
     paddingVertical: 12,
+    paddingHorizontal: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   pdfBtn: {
     backgroundColor: '#f7f0fb',
@@ -818,13 +891,17 @@ const styles = StyleSheet.create({
     borderColor: '#9C27B0',
     borderRadius: 10,
     paddingVertical: 14,
+    paddingHorizontal: 14,
+    minHeight: 52,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 6,
   },
   pdfBtnText: {
     color: '#6a1b9a',
     fontSize: 16,
     fontWeight: '700',
+    textAlign: 'center',
   },
   disabledBtn: {
     opacity: 0.65,
@@ -839,7 +916,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#1565C0',
     borderRadius: 10,
     paddingVertical: 16,
+    paddingHorizontal: 16,
+    minHeight: 54,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
     shadowColor: '#000',
     shadowOpacity: 0.1,
@@ -851,5 +931,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
+    textAlign: 'center',
   },
 });

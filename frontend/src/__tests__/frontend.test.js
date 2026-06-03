@@ -18,13 +18,25 @@ import Purchases from 'react-native-purchases';
 // Mocks — must be declared before any imports that trigger module resolution
 // ---------------------------------------------------------------------------
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ goBack: jest.fn() }),
-  useFocusEffect: jest.fn(),
-}));
+jest.mock('@react-navigation/native', () => {
+  const React = require('react');
+
+  return {
+    useNavigation: () => ({ goBack: jest.fn() }),
+    useFocusEffect: jest.fn((callback) => React.useEffect(callback, [callback])),
+  };
+});
 jest.mock('../data/jobs', () => ({
   createJob: jest.fn(),
+  deleteJob: jest.fn(),
+  listJobs: jest.fn(),
   updateJob: jest.fn(),
+}));
+jest.mock('../monetization/MonetizationContext', () => ({
+  useMonetization: () => ({
+    isAdFree: false,
+    isLoading: false,
+  }),
 }));
 jest.mock('expo-image-picker', () => ({
   requestCameraPermissionsAsync: jest.fn(),
@@ -93,7 +105,7 @@ jest.mock('react-native/Libraries/Utilities/Dimensions', () => ({
   removeEventListener: jest.fn(),
 }));
 
-import { createJob, updateJob } from '../data/jobs';
+import { createJob, listJobs, updateJob } from '../data/jobs';
 import { appendPhotoUri, removePhotoUriAtIndex } from '../data/photos';
 import {
   filterJobsByWorkflow,
@@ -123,6 +135,7 @@ import {
   restoreAdFreePurchase,
 } from '../monetization/revenueCat';
 import CreateJob from '../screens/CreateJob';
+import Jobs from '../screens/Jobs';
 import JobDetail from '../screens/JobDetail';
 
 // ---------------------------------------------------------------------------
@@ -578,6 +591,60 @@ describe('CreateJob screen', () => {
         address: '1 Test St',
       }));
       expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe('Jobs screen mobile polish', () => {
+  const mockNavigation = { navigate: jest.fn() };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('shows local database initialization while the first job load is pending', () => {
+    listJobs.mockReturnValueOnce(new Promise(() => {}));
+
+    const { getByText } = render(<Jobs navigation={mockNavigation} />);
+
+    expect(getByText('Opening your local job list')).toBeTruthy();
+    expect(getByText('Setting up the on-device database. This works without internet.')).toBeTruthy();
+  });
+
+  it('shows a helpful empty state and CTA after local jobs load', async () => {
+    listJobs.mockResolvedValueOnce([]);
+
+    const { getByText } = render(<Jobs navigation={mockNavigation} />);
+
+    await waitFor(() => {
+      expect(getByText('No jobs yet')).toBeTruthy();
+      expect(getByText(/kept on this device/i)).toBeTruthy();
+    });
+
+    fireEvent.press(getByText('Add First Job'));
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateJob');
+  });
+
+  it('shows a retryable local-storage error when jobs cannot be loaded', async () => {
+    listJobs
+      .mockRejectedValueOnce(new Error('sqlite unavailable'))
+      .mockResolvedValueOnce([]);
+
+    const { getByText } = render(<Jobs navigation={mockNavigation} />);
+
+    await waitFor(() => {
+      expect(getByText('Could not open jobs')).toBeTruthy();
+      expect(getByText(/No internet is required/i)).toBeTruthy();
+    });
+
+    await act(async () => {
+      fireEvent.press(getByText('Try Again'));
+    });
+
+    await waitFor(() => {
+      expect(listJobs).toHaveBeenCalledTimes(2);
+      expect(getByText('No jobs yet')).toBeTruthy();
     });
   });
 });
