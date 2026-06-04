@@ -3,6 +3,8 @@ import {
   Alert,
   StyleSheet,
   ScrollView,
+  Text,
+  View,
 } from 'react-native';
 import { createJob } from '../data/jobs';
 import {
@@ -85,6 +87,22 @@ export default function CreateJob({ navigation }) {
       <LocalStorageNotice>
         No account required. This job is saved on this device unless you export it.
       </LocalStorageNotice>
+
+      <View style={styles.docketPreview}>
+        <View style={styles.docketHeader}>
+          <Text style={styles.docketEyebrow}>Quick docket</Text>
+          <Text style={styles.docketBadge}>Local</Text>
+        </View>
+        <Text style={styles.docketTitle}>Start with name and address</Text>
+        <Text style={styles.docketText}>
+          Customer details, notes, photos, reminders, and reports can be added later from the job record.
+        </Text>
+        <View style={styles.docketChecks}>
+          <Text style={styles.docketCheck}>Required fields stay minimal</Text>
+          <Text style={styles.docketCheck}>Saved on this device</Text>
+          <Text style={styles.docketCheck}>Ready for local reports</Text>
+        </View>
+      </View>
 
       <SectionCard
         eyebrow="Work"
@@ -179,6 +197,68 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: spacing.screen,
     paddingBottom: 42,
+  },
+  docketPreview: {
+    backgroundColor: colors.ink,
+    borderColor: colors.graphite,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+    padding: spacing.lg,
+  },
+  docketHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  docketEyebrow: {
+    color: colors.subtle,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  docketBadge: {
+    backgroundColor: colors.accent,
+    borderRadius: 6,
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  docketTitle: {
+    color: colors.white,
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 26,
+  },
+  docketText: {
+    color: colors.border,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: spacing.xs,
+  },
+  docketChecks: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  docketCheck: {
+    backgroundColor: colors.graphite,
+    borderColor: colors.borderStrong,
+    borderRadius: 6,
+    borderWidth: 1,
+    color: colors.surface,
+    flexGrow: 1,
+    flexBasis: 132,
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   saveBtn: {
     marginTop: spacing.sm,
