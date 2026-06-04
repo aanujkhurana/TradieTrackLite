@@ -12,9 +12,9 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { updateJob } from '../data/jobs';
 import {
   appendPhotoUri,
@@ -31,6 +31,19 @@ const formatDateLabel = (value, fallback = 'Not set') => {
   if (!value) return fallback;
   return value.toLocaleString();
 };
+
+function getDateTimePicker() {
+  if (Constants.appOwnership === 'expo') {
+    return null;
+  }
+
+  try {
+    const dateTimePickerModule = require('@react-native-community/datetimepicker');
+    return dateTimePickerModule.default || dateTimePickerModule;
+  } catch {
+    return null;
+  }
+}
 
 export default function JobDetail({ route, navigation }) {
   const { job } = route.params;
@@ -362,6 +375,19 @@ export default function JobDetail({ route, navigation }) {
       : activePicker === 'reminder'
         ? new Date()
         : undefined;
+  const DateTimePicker = activePicker ? getDateTimePicker() : null;
+
+  const openDatePicker = (field) => {
+    if (!getDateTimePicker()) {
+      Alert.alert(
+        'Date picker unavailable',
+        'Date and reminder editing needs a development or release build on this simulator.'
+      );
+      return;
+    }
+
+    setActivePicker(field);
+  };
 
   const getReportJob = () => ({
     ...job,
@@ -512,7 +538,7 @@ export default function JobDetail({ route, navigation }) {
 
         <TouchableOpacity
           style={styles.infoRowBtn}
-          onPress={() => setActivePicker('startDate')}
+          onPress={() => openDatePicker('startDate')}
           activeOpacity={0.8}
         >
           <View style={styles.infoRowText}>
@@ -524,7 +550,7 @@ export default function JobDetail({ route, navigation }) {
 
         <TouchableOpacity
           style={styles.infoRowBtn}
-          onPress={() => setActivePicker('endDate')}
+          onPress={() => openDatePicker('endDate')}
           activeOpacity={0.8}
         >
           <View style={styles.infoRowText}>
@@ -550,7 +576,7 @@ export default function JobDetail({ route, navigation }) {
         </View>
       </View>
 
-      {activePicker && (
+      {activePicker && DateTimePicker && (
         <DateTimePicker
           value={pickerValue}
           mode="datetime"
@@ -607,7 +633,7 @@ export default function JobDetail({ route, navigation }) {
         </View>
         <TouchableOpacity
           style={styles.actionBtn}
-          onPress={() => setActivePicker('reminder')}
+          onPress={() => openDatePicker('reminder')}
           activeOpacity={0.8}
         >
           <Text style={styles.actionBtnText}>

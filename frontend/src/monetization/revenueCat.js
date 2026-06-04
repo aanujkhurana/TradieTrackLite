@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import Constants from 'expo-constants';
 import {
   AD_FREE_ENTITLEMENT_ID,
   AD_FREE_PRODUCT_ID,
@@ -8,6 +8,22 @@ import {
 } from './config';
 
 let configuredApiKey = null;
+
+function getPurchasesModule() {
+  if (Constants.appOwnership === 'expo') {
+    return null;
+  }
+
+  try {
+    const purchasesModule = require('react-native-purchases');
+    return {
+      Purchases: purchasesModule.default || purchasesModule,
+      LOG_LEVEL: purchasesModule.LOG_LEVEL || {},
+    };
+  } catch {
+    return null;
+  }
+}
 
 export function hasActiveAdFreeEntitlement(
   customerInfo,
@@ -44,6 +60,15 @@ export function findAdFreePackage(offerings, productId = AD_FREE_PRODUCT_ID) {
 }
 
 export async function configurePurchases(platform = Platform.OS) {
+  const purchasesModule = getPurchasesModule();
+  if (!purchasesModule) {
+    const err = new Error(
+      'Ad-free purchase testing requires a development or release build.'
+    );
+    err.code = 'PURCHASES_NATIVE_MODULE_UNAVAILABLE';
+    throw err;
+  }
+
   const apiKey = getRevenueCatApiKey(platform);
   if (!apiKey) {
     const err = new Error('RevenueCat is not configured for this build.');
@@ -55,6 +80,7 @@ export async function configurePurchases(platform = Platform.OS) {
     return;
   }
 
+  const { Purchases, LOG_LEVEL } = purchasesModule;
   if (__DEV__ && Purchases.setLogLevel && LOG_LEVEL?.DEBUG) {
     Purchases.setLogLevel(LOG_LEVEL.DEBUG);
   }
@@ -71,6 +97,7 @@ export async function purchaseAdFree(options = {}) {
 
   await configurePurchases(platform);
 
+  const { Purchases } = getPurchasesModule();
   const offerings = await Purchases.getOfferings();
   const adFreePackage = findAdFreePackage(offerings, productId);
   if (!adFreePackage) {
@@ -98,6 +125,7 @@ export async function restoreAdFreePurchase(options = {}) {
 
   await configurePurchases(platform);
 
+  const { Purchases } = getPurchasesModule();
   const customerInfo = await Purchases.restorePurchases();
   const nextState = entitlementStateFromCustomerInfo(customerInfo, entitlementId);
   if (!nextState) {
