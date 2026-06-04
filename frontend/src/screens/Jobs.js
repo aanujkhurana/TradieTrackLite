@@ -32,13 +32,26 @@ import {
   filterJobsByWorkflow,
   isReminderOverdue,
 } from '../utils/jobWorkflow';
-import { formatLoggedDuration } from '../utils/time';
+import { formatLoggedDuration, parseDateValue } from '../utils/time';
 import { buttons, colors, motion, radii, shadows, spacing, typography } from '../theme';
 
 function photosLabel(photos = []) {
   if (!photos.length) return 'No photos';
   if (photos.length === 1) return '1 photo';
   return `${photos.length} photos`;
+}
+
+function formatJobActivity(job) {
+  const updated = parseDateValue(job.updatedAt);
+  const created = parseDateValue(job.createdAt);
+  const date = updated || created;
+  if (!date) return 'Stored locally';
+
+  const label = updated ? 'Updated' : 'Created';
+  return `${label} ${date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  })}`;
 }
 
 export default function Jobs({ navigation }) {
@@ -279,6 +292,9 @@ export default function Jobs({ navigation }) {
             ) : null}
             <Text style={styles.jobAddress} numberOfLines={1}>
               {item.address || 'No address'}
+            </Text>
+            <Text style={styles.jobActivity} numberOfLines={1}>
+              {formatJobActivity(item)}
             </Text>
           </View>
           {reminderOverdue ? (
@@ -725,6 +741,12 @@ const styles = StyleSheet.create({
     color: colors.subtle,
     fontSize: 13,
     lineHeight: 18,
+  },
+  jobActivity: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '800',
   },
   badge: {
     borderRadius: radii.sm,

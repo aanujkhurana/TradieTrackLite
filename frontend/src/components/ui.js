@@ -160,7 +160,18 @@ export function EmptyState({ title, body, actionTitle, onAction, loading }) {
   return (
     <View style={styles.emptyState}>
       <View style={styles.emptyIcon}>
-        {loading ? <ActivityIndicator color={colors.accent} /> : <Text style={styles.emptyIconText}>TT</Text>}
+        {loading ? (
+          <ActivityIndicator color={colors.accent} />
+        ) : (
+          <View style={styles.emptyMark}>
+            <View style={styles.emptyMarkClip} />
+            <View style={styles.emptyMarkLine} />
+            <View style={styles.emptyMarkCheck}>
+              <View style={styles.emptyMarkCheckShort} />
+              <View style={styles.emptyMarkCheckLong} />
+            </View>
+          </View>
+        )}
       </View>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyBody}>{body}</Text>
@@ -411,10 +422,56 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.lg,
   },
-  emptyIconText: {
-    color: colors.accentInk,
-    fontSize: 15,
-    fontWeight: '900',
+  emptyMark: {
+    width: 30,
+    height: 34,
+    borderRadius: radii.sm,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.accentBorder,
+    alignItems: 'center',
+    paddingTop: 7,
+  },
+  emptyMarkClip: {
+    position: 'absolute',
+    top: -4,
+    width: 14,
+    height: 7,
+    borderRadius: 3,
+    backgroundColor: colors.accentInk,
+  },
+  emptyMarkLine: {
+    width: 18,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.amber,
+    marginTop: 8,
+  },
+  emptyMarkCheck: {
+    position: 'absolute',
+    bottom: 8,
+    width: 19,
+    height: 14,
+  },
+  emptyMarkCheckShort: {
+    position: 'absolute',
+    left: 2,
+    bottom: 2,
+    width: 9,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.accent,
+    transform: [{ rotate: '42deg' }],
+  },
+  emptyMarkCheckLong: {
+    position: 'absolute',
+    right: 0,
+    bottom: 4,
+    width: 17,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.accent,
+    transform: [{ rotate: '-48deg' }],
   },
   emptyTitle: {
     ...typography.title,
