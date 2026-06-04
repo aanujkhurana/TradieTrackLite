@@ -99,11 +99,22 @@ jest.mock('@react-native-community/datetimepicker', () => {
   const { View } = require('react-native');
   return (props) => React.createElement(View, { testID: 'DateTimePicker', ...props });
 });
-jest.mock('react-native/Libraries/Utilities/Dimensions', () => ({
-  get: () => ({ width: 375, height: 812 }),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-}));
+jest.mock('react-native/Libraries/Utilities/Dimensions', () => {
+  const dimensions = {
+    get: () => ({ width: 375, height: 812, scale: 1, fontScale: 1 }),
+    getConstants: () => ({
+      window: { width: 375, height: 812, scale: 1, fontScale: 1 },
+      screen: { width: 375, height: 812, scale: 1, fontScale: 1 },
+    }),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  };
+
+  return {
+    ...dimensions,
+    default: dimensions,
+  };
+});
 
 import { createJob, listJobs, updateJob } from '../data/jobs';
 import { appendPhotoUri, removePhotoUriAtIndex } from '../data/photos';
@@ -503,7 +514,10 @@ describe('Ad-free entitlement and monetization helpers', () => {
       },
     });
 
-    await expect(purchaseAdFree({ platform: 'android' })).resolves.toEqual(expect.objectContaining({
+    await expect(purchaseAdFree({
+      platform: 'android',
+      apiKey: 'test_revenuecat_key',
+    })).resolves.toEqual(expect.objectContaining({
       isAdFree: true,
       source: 'purchase',
       provider: 'RevenueCat',
@@ -524,7 +538,10 @@ describe('Ad-free entitlement and monetization helpers', () => {
       },
     });
 
-    await expect(restoreAdFreePurchase({ platform: 'android' })).resolves.toEqual(
+    await expect(restoreAdFreePurchase({
+      platform: 'android',
+      apiKey: 'test_revenuecat_key',
+    })).resolves.toEqual(
       expect.objectContaining({ isAdFree: true })
     );
   });

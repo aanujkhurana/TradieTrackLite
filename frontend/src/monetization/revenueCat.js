@@ -63,7 +63,7 @@ export function findAdFreePackage(offerings, productId = AD_FREE_PRODUCT_ID) {
   });
 }
 
-export async function configurePurchases(platform = Platform.OS) {
+export async function configurePurchases(platform = Platform.OS, apiKeyOverride = '') {
   const purchasesModule = getPurchasesModule();
   if (!purchasesModule) {
     const err = new Error(
@@ -73,7 +73,7 @@ export async function configurePurchases(platform = Platform.OS) {
     throw err;
   }
 
-  const apiKey = getRevenueCatApiKey(platform);
+  const apiKey = apiKeyOverride || getRevenueCatApiKey(platform);
   if (!apiKey) {
     const err = new Error('RevenueCat is not configured for this build.');
     err.code = 'PURCHASES_NOT_CONFIGURED';
@@ -94,12 +94,13 @@ export async function configurePurchases(platform = Platform.OS) {
 
 export async function purchaseAdFree(options = {}) {
   const {
+    apiKey = '',
     entitlementId = AD_FREE_ENTITLEMENT_ID,
     productId = AD_FREE_PRODUCT_ID,
     platform = Platform.OS,
   } = options;
 
-  await configurePurchases(platform);
+  await configurePurchases(platform, apiKey);
 
   const { Purchases } = getPurchasesModule();
   const offerings = await Purchases.getOfferings();
@@ -123,11 +124,12 @@ export async function purchaseAdFree(options = {}) {
 
 export async function restoreAdFreePurchase(options = {}) {
   const {
+    apiKey = '',
     entitlementId = AD_FREE_ENTITLEMENT_ID,
     platform = Platform.OS,
   } = options;
 
-  await configurePurchases(platform);
+  await configurePurchases(platform, apiKey);
 
   const { Purchases } = getPurchasesModule();
   const customerInfo = await Purchases.restorePurchases();

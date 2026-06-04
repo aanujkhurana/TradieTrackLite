@@ -7,7 +7,7 @@ import CreateJob from './src/screens/CreateJob';
 import JobDetail from './src/screens/JobDetail';
 import AdFree from './src/screens/AdFree';
 import { MonetizationProvider } from './src/monetization/MonetizationContext';
-import { colors } from './src/theme';
+import { colors, typography } from './src/theme';
 
 const Stack = createStackNavigator();
 
@@ -23,13 +23,16 @@ function AppNavigator() {
         screenOptions={{
           headerStyle: {
             backgroundColor: colors.surface,
+            borderBottomColor: colors.borderSoft,
+            borderBottomWidth: 1,
             shadowColor: 'transparent',
           },
           headerTintColor: colors.ink,
           headerTitleStyle: {
             color: colors.ink,
-            fontSize: 18,
-            fontWeight: '800',
+            fontSize: 15,
+            fontWeight: '900',
+            letterSpacing: typography.sectionTitle.letterSpacing,
           },
           headerBackTitleVisible: false,
           cardStyle: {

@@ -29,8 +29,8 @@ export function getAdMobBannerUnitId(platform = Platform.OS, isDev = __DEV__, te
 
 export function getRevenueCatApiKey(platform = Platform.OS) {
   if (platform === 'ios') {
-    return process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || '';
+    return process.env['EXPO_PUBLIC_REVENUECAT_IOS_API_KEY'] || '';
   }
 
-  return process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || '';
+  return process.env['EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY'] || '';
 }

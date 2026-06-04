@@ -3,6 +3,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { getAdMobBannerUnitId } from '../monetization/config';
 import { useMonetization } from '../monetization/MonetizationContext';
 import { hasNativeModule } from '../runtime';
+import { colors, radii, spacing } from '../theme';
 
 function getGoogleMobileAdsModule() {
   if (!hasNativeModule(['RNGoogleMobileAdsModule'])) {
@@ -41,8 +42,13 @@ export default function AdBanner({ placement = 'default' }) {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    marginBottom: 12,
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    marginBottom: spacing.md,
     minHeight: 50,
+    paddingVertical: spacing.sm,
     justifyContent: 'center',
   },
 });
