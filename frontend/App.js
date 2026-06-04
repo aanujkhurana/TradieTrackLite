@@ -6,6 +6,7 @@ import Jobs from './src/screens/Jobs';
 import CreateJob from './src/screens/CreateJob';
 import JobDetail from './src/screens/JobDetail';
 import AdFree from './src/screens/AdFree';
+import Settings from './src/screens/Settings';
 import { MonetizationProvider } from './src/monetization/MonetizationContext';
 import { colors, typography } from './src/theme';
 
@@ -59,6 +60,11 @@ function AppNavigator() {
           name="AdFree"
           component={AdFree}
           options={{ title: 'Ad-Free' }}
+        />
+        <Stack.Screen
+          name="Settings"
+          component={Settings}
+          options={{ title: 'Settings' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

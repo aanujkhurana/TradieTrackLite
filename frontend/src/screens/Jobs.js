@@ -318,18 +318,26 @@ export default function Jobs({ navigation }) {
         title="Jobs"
         subtitle={`${stats.inProgress} active, ${stats.completed} completed, ${stats.overdue} overdue`}
         right={
-          <Pressable
-            style={({ pressed }) => [
-              styles.adFreeBtn,
-              isAdFree && styles.adFreeBtnActive,
-              pressed && styles.controlPressed,
-            ]}
-            onPress={() => navigation.navigate('AdFree')}
-          >
-            <Text style={[styles.adFreeBtnText, isAdFree && styles.adFreeBtnTextActive]}>
-              {isAdFree ? 'Ad-Free Active' : 'Remove Ads'}
-            </Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.headerPill,
+                isAdFree && styles.headerPillActive,
+                pressed && styles.controlPressed,
+              ]}
+              onPress={() => navigation.navigate('AdFree')}
+            >
+              <Text style={[styles.headerPillText, isAdFree && styles.headerPillTextActive]}>
+                {isAdFree ? 'Ad-Free' : 'Remove Ads'}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.headerPill, pressed && styles.controlPressed]}
+              onPress={() => navigation.navigate('Settings')}
+            >
+              <Text style={styles.headerPillText}>Settings</Text>
+            </Pressable>
+          </View>
         }
       />
       <View style={styles.topActions}>
@@ -467,7 +475,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
-  adFreeBtn: {
+  headerActions: {
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+  },
+  headerPill: {
     alignSelf: 'center',
     backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
@@ -478,16 +490,16 @@ const styles = StyleSheet.create({
     minHeight: 38,
     justifyContent: 'center',
   },
-  adFreeBtnActive: {
+  headerPillActive: {
     backgroundColor: colors.accentSoft,
     borderColor: colors.accentBorder,
   },
-  adFreeBtnText: {
+  headerPillText: {
     color: colors.muted,
     fontSize: 12,
     fontWeight: '800',
   },
-  adFreeBtnTextActive: {
+  headerPillTextActive: {
     color: colors.accentInk,
   },
   dataSafetyStrip: {
