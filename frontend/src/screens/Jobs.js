@@ -1,10 +1,9 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
-  ActivityIndicator,
   View,
   Text,
   FlatList,
-  TouchableOpacity,
+  Pressable,
   Alert,
   StyleSheet,
   TextInput,
@@ -17,13 +16,30 @@ import AdBanner from '../components/AdBanner';
 import { useMonetization } from '../monetization/MonetizationContext';
 import { DATA_SAFETY_MESSAGES } from '../privacy/dataSafety';
 import {
+  ChipButton,
+  EmptyState,
+  IconButton,
+  LocalStorageNotice,
+  PrimaryButton,
+  ScreenHeader,
+  SecondaryButton,
+  StatusChip,
+  Surface,
+} from '../components/ui';
+import {
   STATUS_FILTERS,
   STATUS_META,
   filterJobsByWorkflow,
   isReminderOverdue,
 } from '../utils/jobWorkflow';
 import { formatLoggedDuration } from '../utils/time';
-import { buttons, colors, radii, shadows, spacing, typography } from '../theme';
+import { buttons, colors, motion, radii, shadows, spacing, typography } from '../theme';
+
+function photosLabel(photos = []) {
+  if (!photos.length) return 'No photos';
+  if (photos.length === 1) return '1 photo';
+  return `${photos.length} photos`;
+}
 
 export default function Jobs({ navigation }) {
   const [jobs, setJobs] = useState([]);
@@ -123,8 +139,11 @@ export default function Jobs({ navigation }) {
   );
 
   const renderSummary = () => (
-    <View style={styles.summaryCard}>
-      <Text style={styles.summaryTitle}>Jobs Overview</Text>
+    <Surface style={styles.summaryPanel}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionEyebrow}>Overview</Text>
+        <Text style={styles.summaryTitle}>Jobs Overview</Text>
+      </View>
       <View style={styles.summaryRow}>
         <View style={styles.summaryChip}>
           <Text style={styles.summaryChipLabel}>Total</Text>
@@ -147,35 +166,31 @@ export default function Jobs({ navigation }) {
           </Text>
         </View>
       </View>
-    </View>
+    </Surface>
   );
 
   const renderFilters = () => (
-    <View style={styles.filtersCard}>
+    <View style={styles.filtersPanel}>
+      <Text style={styles.sectionEyebrow}>Find</Text>
       <TextInput
         style={styles.searchInput}
         value={searchTerm}
         onChangeText={setSearchTerm}
         placeholder="Search title, customer, address, or notes"
+        placeholderTextColor={colors.subtle}
         returnKeyType="search"
       />
       <View style={styles.filterRow}>
         {STATUS_FILTERS.map((filter) => {
           const active = statusFilter === filter.key;
           return (
-            <TouchableOpacity
+            <ChipButton
               key={filter.key}
-              style={[
-                styles.filterBtn,
-                active && styles.filterBtnActive,
-              ]}
+              title={filter.label}
+              active={active}
               onPress={() => setStatusFilter(filter.key)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.filterBtnText, active && styles.filterBtnTextActive]}>
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
+              style={styles.filterBtn}
+            />
           );
         })}
       </View>
@@ -183,74 +198,49 @@ export default function Jobs({ navigation }) {
   );
 
   const renderDataSafetyNote = () => (
-    <View style={styles.dataSafetyCard}>
-      <Text style={styles.dataSafetyTitle}>Device Storage</Text>
-      <Text style={styles.dataSafetyText}>
-        {DATA_SAFETY_MESSAGES.localStorageNote}
-      </Text>
-      <Text style={styles.dataSafetyText}>
-        {DATA_SAFETY_MESSAGES.deleteWarning}
-      </Text>
-      <Text style={styles.dataSafetyReminder}>
-        {DATA_SAFETY_MESSAGES.backupReminder}
-      </Text>
-    </View>
+    <LocalStorageNotice title="Device Storage">
+      {`${DATA_SAFETY_MESSAGES.localStorageNote} ${DATA_SAFETY_MESSAGES.deleteWarning} ${DATA_SAFETY_MESSAGES.backupReminder}`}
+    </LocalStorageNotice>
   );
 
   const renderEmptyState = () => {
     if (initializing) {
       return (
-        <View style={styles.stateCard}>
-          <ActivityIndicator color={colors.accent} />
-          <Text style={styles.stateTitle}>Opening your local job list</Text>
-          <Text style={styles.stateText}>
-            Setting up the on-device database. This works without internet.
-          </Text>
-        </View>
+        <EmptyState
+          title="Opening your local job list"
+          body="Setting up the on-device database. This works without internet."
+          loading
+        />
       );
     }
 
     if (loadError) {
       return (
-        <View style={styles.stateCard}>
-          <Text style={styles.stateTitle}>Could not open jobs</Text>
-          <Text style={styles.stateText}>{loadError}</Text>
-          <TouchableOpacity
-            style={styles.stateActionBtn}
-            onPress={() => fetchJobs({ showLoader: true })}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.stateActionText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          title="Could not open jobs"
+          body={loadError}
+          actionTitle="Try Again"
+          onAction={() => fetchJobs({ showLoader: true })}
+        />
       );
     }
 
     if (jobs.length === 0) {
       return (
-        <View style={styles.stateCard}>
-          <Text style={styles.stateTitle}>No jobs yet</Text>
-          <Text style={styles.stateText}>
-            Add your first job with the customer, address, notes, photos, and reminders kept on this device.
-          </Text>
-          <TouchableOpacity
-            style={styles.stateActionBtn}
-            onPress={() => navigation.navigate('CreateJob')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.stateActionText}>Add First Job</Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          title="No jobs yet"
+          body="Add your first job with the customer, address, notes, photos, and reminders kept on this device."
+          actionTitle="Add First Job"
+          onAction={() => navigation.navigate('CreateJob')}
+        />
       );
     }
 
     return (
-      <View style={styles.stateCard}>
-        <Text style={styles.stateTitle}>No matching jobs</Text>
-        <Text style={styles.stateText}>
-          Try another status filter or search term.
-        </Text>
-      </View>
+      <EmptyState
+        title="No matching jobs"
+        body="Try another status filter or search term."
+      />
     );
   };
 
@@ -261,14 +251,17 @@ export default function Jobs({ navigation }) {
     const reminderOverdue = isReminderOverdue(item);
 
     return (
-      <TouchableOpacity
-        style={styles.row}
+      <Pressable
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         onPress={() => navigation.navigate('JobDetail', { job: item })}
-        activeOpacity={0.7}
       >
+        <View style={[styles.statusRail, { backgroundColor: statusMeta.color }]} />
         <View style={styles.rowContent}>
           <View style={styles.rowMain}>
-            <Text style={styles.jobName} numberOfLines={1}>{item.name}</Text>
+            <View style={styles.rowTitleLine}>
+              <Text style={styles.jobName} numberOfLines={1}>{item.name}</Text>
+              <StatusChip label={statusMeta.label} color={statusMeta.color} />
+            </View>
             {item.customerName ? (
               <Text style={styles.customerName} numberOfLines={1}>
                 {item.customerName}
@@ -288,14 +281,18 @@ export default function Jobs({ navigation }) {
               {item.address || 'No address'}
             </Text>
           </View>
-          <View style={[styles.badge, { backgroundColor: statusMeta.color }]}>
-            <Text style={styles.badgeText}>{statusMeta.label}</Text>
-          </View>
           {reminderOverdue ? (
             <View style={styles.overdueBadge}>
               <Text style={styles.overdueBadgeText}>Reminder Overdue</Text>
             </View>
           ) : null}
+          <View style={styles.rowMetaLine}>
+            <Text style={styles.rowMetaText}>{photosLabel(item.photos)}</Text>
+            <Text style={styles.rowMetaDot}>|</Text>
+            <Text style={styles.rowMetaText}>
+              {item.reminder ? 'Reminder set' : 'No reminder'}
+            </Text>
+          </View>
         </View>
         {isCompleted ? (
           <View style={styles.timeLoggedBox}>
@@ -303,50 +300,53 @@ export default function Jobs({ navigation }) {
             <Text style={styles.timeLoggedValue}>{loggedTime}</Text>
           </View>
         ) : (
-          <TouchableOpacity
-            style={styles.deleteBtn}
+          <IconButton
+            label="x"
             onPress={() => handleDelete(item)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Text style={styles.deleteBtnText}>✕</Text>
-          </TouchableOpacity>
+            danger
+            style={styles.deleteBtn}
+          />
         )}
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
   return (
     <View style={styles.container}>
+      <ScreenHeader
+        eyebrow="Local-first tracker"
+        title="Jobs"
+        subtitle={`${stats.inProgress} active, ${stats.completed} completed, ${stats.overdue} overdue`}
+        right={
+          <Pressable
+            style={({ pressed }) => [
+              styles.adFreeBtn,
+              isAdFree && styles.adFreeBtnActive,
+              pressed && styles.controlPressed,
+            ]}
+            onPress={() => navigation.navigate('AdFree')}
+          >
+            <Text style={[styles.adFreeBtnText, isAdFree && styles.adFreeBtnTextActive]}>
+              {isAdFree ? 'Ad-Free Active' : 'Remove Ads'}
+            </Text>
+          </Pressable>
+        }
+      />
       <View style={styles.topActions}>
-        <TouchableOpacity
-          style={[styles.addBtn, initializing && styles.disabledBtn]}
+        <PrimaryButton
+          title="+ Add New Job"
           onPress={() => navigation.navigate('CreateJob')}
-          activeOpacity={0.8}
           disabled={initializing}
-        >
-          <Text style={styles.addBtnText}>+ Add New Job</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.backupBtn, (backupLoading || initializing) && styles.disabledBtn]}
+          style={styles.addBtn}
+        />
+        <SecondaryButton
+          title={backupLoading ? 'Exporting...' : 'Export Backup'}
           onPress={handleExportBackup}
-          activeOpacity={0.8}
           disabled={backupLoading || initializing}
-        >
-          <Text style={styles.backupBtnText}>
-            {backupLoading ? 'Exporting...' : 'Export Backup'}
-          </Text>
-        </TouchableOpacity>
+          style={styles.backupBtn}
+        />
       </View>
       {backupError ? <Text style={styles.backupError}>{backupError}</Text> : null}
-      <TouchableOpacity
-        style={styles.adFreeBtn}
-        onPress={() => navigation.navigate('AdFree')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.adFreeBtnText}>
-          {isAdFree ? 'Ad-Free Active' : 'Remove Ads'}
-        </Text>
-      </TouchableOpacity>
 
       <FlatList
         data={visibleJobs}
@@ -374,16 +374,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.screen,
-    paddingTop: spacing.screen,
+    paddingTop: spacing.lg,
   },
   listContent: {
-    paddingBottom: 28,
+    paddingBottom: 34,
+  },
+  pageHeader: {
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.lg,
+  },
+  pageEyebrow: {
+    ...typography.eyebrow,
+    color: colors.subtle,
+    marginBottom: spacing.sm,
+  },
+  pageTitleRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  pageTitleCopy: {
+    flex: 1,
+  },
+  pageTitle: {
+    ...typography.screenTitle,
+    color: colors.ink,
+  },
+  pageSubtitle: {
+    ...typography.small,
+    color: colors.muted,
+    marginTop: spacing.xs,
   },
   topActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.gap,
-    marginBottom: spacing.gap,
+    marginBottom: spacing.md,
   },
   addBtn: {
     flexGrow: 1.25,
@@ -391,28 +418,30 @@ const styles = StyleSheet.create({
     minHeight: buttons.minHeight,
     backgroundColor: colors.accent,
     borderRadius: buttons.radius,
-    paddingVertical: 15,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.card,
+    borderWidth: 1,
+    borderColor: colors.accentInk,
+    ...shadows.lift,
   },
   addBtnText: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
     textAlign: 'center',
   },
   backupBtn: {
     flexGrow: 1,
     flexBasis: 150,
     minHeight: buttons.minHeight,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.border,
     borderRadius: buttons.radius,
-    paddingVertical: 15,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -422,120 +451,153 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
+  primaryPressed: {
+    opacity: motion.pressedOpacity,
+    transform: [{ scale: 0.99 }],
+  },
+  controlPressed: {
+    opacity: motion.pressedOpacity,
+  },
   disabledBtn: {
     opacity: 0.65,
   },
   backupError: {
-    color: colors.ink,
+    color: colors.danger,
     fontSize: 13,
     marginBottom: 12,
     textAlign: 'center',
   },
   adFreeBtn: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.surface,
+    alignSelf: 'center',
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     borderRadius: radii.md,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    marginBottom: spacing.gap,
-    minHeight: 46,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 38,
     justifyContent: 'center',
   },
+  adFreeBtnActive: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accentBorder,
+  },
   adFreeBtnText: {
-    color: colors.text,
-    fontSize: 13,
+    color: colors.muted,
+    fontSize: 12,
     fontWeight: '800',
   },
-  dataSafetyCard: {
-    backgroundColor: colors.surface,
+  adFreeBtnTextActive: {
+    color: colors.accentInk,
+  },
+  dataSafetyStrip: {
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radii.md,
-    padding: spacing.card,
-    marginBottom: spacing.gap,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    ...shadows.card,
+    borderColor: colors.borderSoft,
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  dataSafetyRule: {
+    width: 2,
+    borderRadius: 1,
+    backgroundColor: colors.accent,
+  },
+  dataSafetyCopy: {
+    flex: 1,
   },
   dataSafetyTitle: {
     ...typography.sectionTitle,
-    color: colors.text,
-    marginBottom: 6,
+    color: colors.ink,
+    marginBottom: spacing.xs,
   },
   dataSafetyText: {
     color: colors.muted,
     ...typography.small,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   dataSafetyReminder: {
-    color: colors.accent,
+    color: colors.accentInk,
     ...typography.small,
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  summaryCard: {
-    backgroundColor: colors.surface,
+  summaryPanel: {
+    backgroundColor: colors.surfaceRaised,
     borderRadius: radii.md,
-    padding: spacing.card,
-    marginBottom: spacing.gap,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     ...shadows.card,
+  },
+  sectionHeader: {
+    marginBottom: spacing.md,
+  },
+  sectionEyebrow: {
+    ...typography.eyebrow,
+    color: colors.subtle,
+    marginBottom: spacing.xs,
   },
   summaryTitle: {
     ...typography.sectionTitle,
-    color: colors.text,
-    marginBottom: spacing.gap,
+    color: colors.ink,
   },
   summaryRow: {
     flexDirection: 'row',
-    gap: spacing.gap,
+    gap: spacing.sm,
     flexWrap: 'wrap',
   },
   summaryChip: {
     flexGrow: 1,
-    flexBasis: 118,
+    flexBasis: 116,
     backgroundColor: colors.surfaceAlt,
-    borderRadius: radii.md,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    alignItems: 'center',
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    alignItems: 'flex-start',
   },
   summaryChipLabel: {
     fontSize: 11,
     color: colors.subtle,
-    marginBottom: 3,
+    marginBottom: spacing.xs,
     textTransform: 'uppercase',
-    fontWeight: '700',
+    fontWeight: '800',
   },
   summaryChipValue: {
-    fontSize: 20,
+    fontSize: 24,
+    lineHeight: 28,
     color: colors.ink,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   summaryChipWarning: {
     backgroundColor: colors.accentSoft,
+    borderColor: colors.accentBorder,
   },
   summaryChipWarningLabel: {
-    color: colors.accent,
+    color: colors.accentInk,
   },
   summaryChipWarningValue: {
-    color: colors.accent,
+    color: colors.accentInk,
   },
-  filtersCard: {
-    backgroundColor: colors.surface,
+  filtersPanel: {
+    backgroundColor: colors.surfaceRaised,
     borderRadius: radii.md,
-    padding: spacing.card,
-    marginBottom: spacing.gap,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     ...shadows.card,
   },
   searchInput: {
-    backgroundColor: colors.surfaceInset,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     borderRadius: radii.md,
-    paddingHorizontal: 14,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 13,
     fontSize: 15,
     minHeight: 50,
@@ -544,28 +606,28 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.gap,
-    marginTop: spacing.gap,
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
   filterBtn: {
-    minHeight: 48,
+    minHeight: 42,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radii.md,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
   },
   filterBtnActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
   },
   filterBtnText: {
-    color: colors.text,
+    color: colors.muted,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   filterBtnTextActive: {
     color: colors.white,
@@ -573,93 +635,139 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     borderRadius: radii.md,
-    marginBottom: spacing.gap,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    minHeight: 72,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    minHeight: 92,
     borderWidth: 1,
+    borderColor: colors.borderSoft,
+    overflow: 'hidden',
+  },
+  rowPressed: {
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
-    ...shadows.card,
+  },
+  statusRail: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    top: 0,
+    width: 3,
   },
   rowContent: {
     flex: 1,
-    marginRight: 8,
-    gap: 8,
+    marginRight: spacing.sm,
+    gap: spacing.sm,
+  },
+  rowMetaLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  rowMetaText: {
+    color: colors.subtle,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+  },
+  rowMetaDot: {
+    color: colors.borderStrong,
+    fontSize: 12,
+    lineHeight: 17,
   },
   rowMain: {
-    gap: 2,
+    gap: spacing.xs,
+  },
+  rowTitleLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
   },
   jobName: {
-    fontSize: 16,
-    fontWeight: '800',
+    flex: 1,
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '900',
     color: colors.ink,
   },
   customerName: {
     color: colors.text,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
   },
   customerPhone: {
     color: colors.muted,
     fontSize: 13,
+    lineHeight: 18,
   },
   customerEmail: {
     color: colors.muted,
     fontSize: 13,
+    lineHeight: 18,
   },
   jobAddress: {
     color: colors.subtle,
     fontSize: 13,
+    lineHeight: 18,
   },
   badge: {
     borderRadius: radii.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    backgroundColor: colors.surfaceRaised,
   },
   badgeText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     textAlign: 'center',
   },
   overdueBadge: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.dangerSoft,
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: colors.danger,
     borderRadius: radii.sm,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     alignSelf: 'flex-start',
   },
   overdueBadgeText: {
-    color: colors.accent,
-    fontSize: 12,
-    fontWeight: '700',
+    color: colors.danger,
+    fontSize: 11,
+    fontWeight: '800',
   },
   deleteBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 42,
+    height: 42,
+    borderRadius: radii.md,
     backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 1,
+  },
+  deleteBtnPressed: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.danger,
   },
   deleteBtnText: {
-    color: colors.ink,
+    color: colors.muted,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   timeLoggedBox: {
     backgroundColor: colors.surfaceAlt,
     borderRadius: radii.md,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     alignItems: 'flex-end',
     minWidth: 96,
     maxWidth: 124,
@@ -667,29 +775,31 @@ const styles = StyleSheet.create({
   timeLoggedLabel: {
     fontSize: 11,
     color: colors.subtle,
-    fontWeight: '600',
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   timeLoggedValue: {
     fontSize: 13,
     color: colors.ink,
-    fontWeight: '700',
+    fontWeight: '800',
     marginTop: 2,
   },
   stateCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     borderRadius: radii.md,
-    padding: 22,
-    marginTop: 24,
+    padding: spacing.xxl,
+    marginTop: spacing.xl,
     alignItems: 'center',
     ...shadows.card,
   },
   stateTitle: {
     color: colors.ink,
-    fontSize: 18,
-    fontWeight: '800',
-    marginTop: 10,
+    fontSize: 19,
+    lineHeight: 25,
+    fontWeight: '900',
+    marginTop: spacing.sm,
     textAlign: 'center',
   },
   stateText: {
@@ -700,18 +810,20 @@ const styles = StyleSheet.create({
   },
   stateActionBtn: {
     minHeight: buttons.minHeight,
-    marginTop: 16,
+    marginTop: spacing.lg,
     backgroundColor: colors.accent,
     borderRadius: buttons.radius,
-    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: colors.accentInk,
+    paddingHorizontal: spacing.xl,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stateActionText: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
     textAlign: 'center',
   },
 });

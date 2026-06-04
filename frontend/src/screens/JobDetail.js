@@ -2,8 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
+  Pressable,
   Image,
   FlatList,
   ScrollView,
@@ -24,6 +23,16 @@ import {
 import { STATUS_OPTIONS, getReminderState } from '../utils/jobWorkflow';
 import { shareJobReport } from '../data/reports';
 import { formatLoggedDuration } from '../utils/time';
+import {
+  ChipButton,
+  FormInput,
+  InfoRow,
+  LocalStorageNotice,
+  PrimaryButton,
+  ScreenHeader,
+  SecondaryButton,
+  SectionCard,
+} from '../components/ui';
 import { buttons, colors, radii, shadows, spacing, typography } from '../theme';
 import { hasNativeModule, isExpoGo } from '../runtime';
 
@@ -81,6 +90,7 @@ export default function JobDetail({ route, navigation }) {
     () => getReminderState({ status, reminder }),
     [reminder, status]
   );
+  const statusMeta = STATUS_OPTIONS.find((opt) => opt.key === status) || STATUS_OPTIONS[0];
 
 
   const handleStorageError = (err) => {
@@ -426,27 +436,38 @@ export default function JobDetail({ route, navigation }) {
       contentContainerStyle={styles.contentContainer}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Job Details</Text>
-        <Text style={styles.label}>Job Name</Text>
-        <TextInput
-          style={styles.input}
+      <ScreenHeader
+        eyebrow="Job record"
+        title={name || 'Untitled job'}
+        subtitle={address || 'No address recorded'}
+        right={<View style={[styles.headerStatusMark, { backgroundColor: statusMeta.color }]} />}
+      />
+
+      <LocalStorageNotice>
+        Photos, reminders, notes, and reports for this job stay on this device unless you share or export them.
+      </LocalStorageNotice>
+
+      <SectionCard
+        eyebrow="Summary"
+        title="Job Details"
+        subtitle="A clear work record for the customer, location, notes, and follow-up actions."
+      >
+        <FormInput
+          label="Job Name"
           value={name}
           onChangeText={setName}
           placeholder="Job name"
         />
 
-        <Text style={styles.label}>Customer Name</Text>
-        <TextInput
-          style={styles.input}
+        <FormInput
+          label="Customer Name"
           value={customerName}
           onChangeText={setCustomerName}
           placeholder="Customer name"
         />
 
-        <Text style={styles.label}>Customer Phone</Text>
-        <TextInput
-          style={styles.input}
+        <FormInput
+          label="Customer Phone"
           value={customerPhone}
           onChangeText={setCustomerPhone}
           placeholder="Customer phone"
@@ -455,18 +476,13 @@ export default function JobDetail({ route, navigation }) {
 
         {customerPhone.trim() ? (
           <View style={styles.inlineActions}>
-            <TouchableOpacity style={styles.inlineActionBtn} onPress={callCustomer} activeOpacity={0.8}>
-              <Text style={styles.actionBtnText}>Call Customer</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.inlineActionBtn} onPress={messageCustomer} activeOpacity={0.8}>
-              <Text style={styles.actionBtnText}>Message</Text>
-            </TouchableOpacity>
+            <SecondaryButton title="Call Customer" onPress={callCustomer} style={styles.inlineActionBtn} />
+            <SecondaryButton title="Message" onPress={messageCustomer} style={styles.inlineActionBtn} />
           </View>
         ) : null}
 
-        <Text style={styles.label}>Customer Email</Text>
-        <TextInput
-          style={styles.input}
+        <FormInput
+          label="Customer Email"
           value={customerEmail}
           onChangeText={setCustomerEmail}
           placeholder="Customer email"
@@ -475,14 +491,11 @@ export default function JobDetail({ route, navigation }) {
         />
 
         {customerEmail.trim() ? (
-          <TouchableOpacity style={styles.actionBtn} onPress={emailCustomer} activeOpacity={0.8}>
-            <Text style={styles.actionBtnText}>Email Customer</Text>
-          </TouchableOpacity>
+          <SecondaryButton title="Email Customer" onPress={emailCustomer} style={styles.actionBtn} />
         ) : null}
 
-        <Text style={styles.label}>Customer Notes</Text>
-        <TextInput
-          style={[styles.input, styles.notesInput]}
+        <FormInput
+          label="Customer Notes"
           value={customerNotes}
           onChangeText={setCustomerNotes}
           placeholder="Customer notes..."
@@ -490,91 +503,77 @@ export default function JobDetail({ route, navigation }) {
           numberOfLines={3}
         />
 
-        <Text style={styles.label}>Address</Text>
-        <TextInput
-          style={styles.input}
+        <FormInput
+          label="Address"
           value={address}
           onChangeText={setAddress}
           placeholder="Job address"
         />
 
-        <Text style={styles.label}>Job Notes</Text>
-        <TextInput
-          style={[styles.input, styles.notesInput]}
+        <FormInput
+          label="Job Notes"
           value={notes}
           onChangeText={setNotes}
           placeholder="Notes..."
           multiline
           numberOfLines={4}
         />
-      </View>
+      </SectionCard>
 
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Status</Text>
+      <SectionCard
+        eyebrow="Workflow"
+        title="Status"
+        subtitle="Keep the job state obvious at a glance."
+      >
         <View style={styles.statusRow}>
           {STATUS_OPTIONS.map((opt) => {
             const active = status === opt.key;
             return (
-              <TouchableOpacity
+              <ChipButton
                 key={opt.key}
-                style={[
-                  styles.statusBtn,
-                  active && styles.statusBtnActive,
-                ]}
+                title={opt.label}
+                active={active}
                 onPress={() => setStatus(opt.key)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.statusBtnText, active && styles.statusBtnTextActive]}>
-                  {opt.label}
-                </Text>
-              </TouchableOpacity>
+                style={styles.statusBtn}
+              />
             );
           })}
         </View>
-      </View>
+      </SectionCard>
 
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Time Logged</Text>
+      <SectionCard
+        eyebrow="Time"
+        title="Time Logged"
+        subtitle="Completed jobs keep their end time so reports can show the total."
+      >
 
-        <TouchableOpacity
-          style={styles.infoRowBtn}
+        <InfoRow
+          label="Job Start"
+          value={formatDateLabel(startDate)}
+          action="Edit"
           onPress={() => openDatePicker('startDate')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.infoRowText}>
-            <Text style={styles.infoRowLabel}>Job Start</Text>
-            <Text style={styles.infoRowValue}>{formatDateLabel(startDate)}</Text>
-          </View>
-          <Text style={styles.infoRowAction}>Edit</Text>
-        </TouchableOpacity>
+        />
 
-        <TouchableOpacity
-          style={styles.infoRowBtn}
+        <InfoRow
+          label="Job End"
+          value={formatDateLabel(endDate)}
+          action="Edit"
           onPress={() => openDatePicker('endDate')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.infoRowText}>
-            <Text style={styles.infoRowLabel}>Job End</Text>
-            <Text style={styles.infoRowValue}>{formatDateLabel(endDate)}</Text>
-          </View>
-          <Text style={styles.infoRowAction}>Edit</Text>
-        </TouchableOpacity>
+        />
 
         {endDate && (
-          <TouchableOpacity
-            style={styles.clearBtn}
+          <SecondaryButton
+            title="Clear End Time"
             onPress={() => setEndDate(null)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.clearBtnText}>Clear End Time</Text>
-          </TouchableOpacity>
+            style={styles.compactBtn}
+          />
         )}
 
         <View style={styles.totalTimeBox}>
           <Text style={styles.totalTimeLabel}>Total Logged</Text>
           <Text style={styles.totalTimeValue}>{totalLoggedTime}</Text>
         </View>
-      </View>
+      </SectionCard>
 
       {activePicker && DateTimePicker && (
         <DateTimePicker
@@ -586,11 +585,12 @@ export default function JobDetail({ route, navigation }) {
         />
       )}
 
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Photos</Text>
-        <TouchableOpacity style={styles.actionBtn} onPress={addPhoto} activeOpacity={0.8}>
-          <Text style={styles.actionBtnText}>Add Photo</Text>
-        </TouchableOpacity>
+      <SectionCard
+        eyebrow="Camera"
+        title="Photos"
+        subtitle={photos.length ? `${photos.length} saved in app storage.` : 'Camera-first attachments, stored locally.'}
+      >
+        <SecondaryButton title="Add Photo" onPress={addPhoto} style={styles.actionBtn} />
 
         {photos.length > 0 && (
           <FlatList
@@ -602,22 +602,24 @@ export default function JobDetail({ route, navigation }) {
             renderItem={({ item, index }) => (
               <View style={styles.photoTile}>
                 <Image source={{ uri: item }} style={styles.photo} />
-                <TouchableOpacity
+                <Pressable
                   style={styles.photoDeleteBtn}
                   onPress={() => deletePhoto(item, index)}
-                  activeOpacity={0.8}
                   accessibilityLabel="Delete photo"
                 >
                   <Text style={styles.photoDeleteText}>x</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
           />
         )}
-      </View>
+      </SectionCard>
 
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Reminder</Text>
+      <SectionCard
+        eyebrow="Follow-up"
+        title="Reminder"
+        subtitle="Local notifications help you keep moving without any cloud account."
+      >
         <View style={[
           styles.reminderStateBox,
           reminderState.key === 'overdue' && styles.reminderStateBoxOverdue,
@@ -631,47 +633,41 @@ export default function JobDetail({ route, navigation }) {
           </Text>
           <Text style={styles.reminderStateText}>{reminderState.label}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.actionBtn}
+        <SecondaryButton
+          title={reminder ? 'Change Reminder' : 'Set Reminder'}
           onPress={() => openDatePicker('reminder')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.actionBtnText}>
-            {reminder ? 'Change Reminder' : 'Set Reminder'}
-          </Text>
-        </TouchableOpacity>
+          style={styles.actionBtn}
+        />
 
         {reminder && (
-          <TouchableOpacity
-            style={styles.clearBtn}
+          <SecondaryButton
+            title="Clear Reminder"
             onPress={() => setReminder(null)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.clearBtnText}>Clear Reminder</Text>
-          </TouchableOpacity>
+            style={styles.compactBtn}
+          />
         )}
-      </View>
+      </SectionCard>
 
-      <TouchableOpacity
-        style={[styles.pdfBtn, (reportLoading || saving) && styles.disabledBtn]}
-        onPress={shareCurrentJobReport}
-        activeOpacity={0.8}
-        disabled={reportLoading || saving}
+      <SectionCard
+        eyebrow="Report"
+        title="Share a job report"
+        subtitle="Build a local PDF summary with customer details, notes, time, and photos."
       >
-        <Text style={styles.pdfBtnText}>
-          {reportLoading ? 'Building Report...' : 'Share Job Report'}
-        </Text>
-      </TouchableOpacity>
+        <SecondaryButton
+          title={reportLoading ? 'Building Report...' : 'Share Job Report'}
+          onPress={shareCurrentJobReport}
+          disabled={reportLoading || saving}
+          style={styles.actionBtn}
+        />
+      </SectionCard>
       {reportError ? <Text style={styles.reportError}>{reportError}</Text> : null}
 
-      <TouchableOpacity
-        style={[styles.saveBtn, saving && styles.disabledBtn]}
+      <PrimaryButton
+        title={saving ? 'Saving...' : 'Save'}
         onPress={save}
-        activeOpacity={0.8}
         disabled={saving}
-      >
-        <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save'}</Text>
-      </TouchableOpacity>
+        style={styles.saveBtn}
+      />
     </ScrollView>
   );
 }
@@ -683,69 +679,93 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacing.screen,
-    paddingBottom: 40,
+    paddingBottom: 44,
   },
-  sectionCard: {
-    backgroundColor: colors.surface,
+  headerStatusMark: {
+    width: 38,
+    height: 38,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.card,
-    marginBottom: spacing.gap,
+    borderColor: colors.borderSoft,
+  },
+  pageHeader: {
+    paddingBottom: spacing.xl,
+  },
+  pageEyebrow: {
+    ...typography.eyebrow,
+    color: colors.subtle,
+    marginBottom: spacing.sm,
+  },
+  pageTitle: {
+    ...typography.screenTitle,
+    color: colors.ink,
+  },
+  pageSubtitle: {
+    ...typography.body,
+    color: colors.muted,
+    marginTop: spacing.xs,
+  },
+  sectionCard: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     ...shadows.card,
   },
   sectionTitle: {
     ...typography.sectionTitle,
     color: colors.ink,
-    marginBottom: 8,
+    marginBottom: spacing.md,
   },
   label: {
     ...typography.label,
-    color: colors.text,
-    marginTop: 12,
-    marginBottom: 6,
+    color: colors.muted,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
   input: {
-    backgroundColor: colors.surfaceInset,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     borderRadius: radii.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 13,
     fontSize: 16,
-    minHeight: 50,
+    lineHeight: 21,
+    minHeight: 52,
     color: colors.text,
   },
   notesInput: {
-    minHeight: 104,
+    minHeight: 112,
     textAlignVertical: 'top',
   },
   statusRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.gap,
-    marginTop: 4,
+    gap: spacing.sm,
   },
   statusBtn: {
     flexGrow: 1,
     flexBasis: 120,
-    minHeight: buttons.minHeight,
+    minHeight: 46,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radii.md,
-    paddingVertical: 14,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
   },
   statusBtnActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
   },
   statusBtnText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: colors.text,
+    fontWeight: '800',
+    color: colors.muted,
     textAlign: 'center',
   },
   statusBtnTextActive: {
@@ -753,16 +773,17 @@ const styles = StyleSheet.create({
   },
   infoRowBtn: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     borderRadius: radii.md,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    minHeight: 58,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 8,
-    gap: 10,
+    marginTop: spacing.sm,
+    gap: spacing.md,
+    backgroundColor: colors.surfaceAlt,
   },
   infoRowText: {
     flex: 1,
@@ -770,68 +791,77 @@ const styles = StyleSheet.create({
   infoRowLabel: {
     ...typography.label,
     color: colors.subtle,
-    marginBottom: 3,
+    marginBottom: spacing.xs,
   },
   infoRowValue: {
     fontSize: 14,
     color: colors.text,
-    fontWeight: '600',
+    fontWeight: '700',
     flexShrink: 1,
   },
   infoRowAction: {
-    color: colors.accent,
-    fontWeight: '800',
+    color: colors.accentInk,
+    fontWeight: '900',
     fontSize: 13,
     flexShrink: 0,
   },
   clearBtn: {
-    marginTop: 10,
+    marginTop: spacing.sm,
     alignSelf: 'flex-start',
     backgroundColor: colors.surfaceAlt,
     borderRadius: radii.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     minHeight: 44,
     justifyContent: 'center',
   },
   clearBtnText: {
-    color: colors.ink,
+    color: colors.muted,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '900',
+  },
+  compactBtn: {
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    paddingVertical: spacing.sm,
   },
   totalTimeBox: {
-    marginTop: 12,
-    backgroundColor: colors.surfaceAlt,
+    marginTop: spacing.md,
+    backgroundColor: colors.ink,
     borderRadius: radii.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   totalTimeLabel: {
     ...typography.label,
     color: colors.subtle,
   },
   totalTimeValue: {
-    fontSize: 17,
-    color: colors.ink,
-    fontWeight: '800',
-    marginTop: 2,
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.white,
+    fontWeight: '900',
+    marginTop: spacing.xs,
   },
   reminderStateBox: {
     backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     borderRadius: radii.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
   },
   reminderStateBoxScheduled: {
     backgroundColor: colors.accentSoft,
-    borderColor: colors.accent,
+    borderColor: colors.accentBorder,
   },
   reminderStateBoxOverdue: {
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accent,
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.danger,
   },
   reminderStateTitle: {
     color: colors.subtle,
@@ -839,15 +869,15 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   reminderStateTitleOverdue: {
-    color: colors.accent,
+    color: colors.danger,
   },
   reminderStateText: {
     color: colors.text,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   photoGrid: {
-    marginTop: 8,
+    marginTop: spacing.md,
   },
   photo: {
     width: PHOTO_SIZE,
@@ -874,87 +904,89 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 17,
     lineHeight: 18,
-    fontWeight: '700',
+    fontWeight: '900',
   },
   actionBtn: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.borderSoft,
     borderRadius: radii.md,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    paddingVertical: 13,
+    paddingHorizontal: spacing.lg,
     minHeight: buttons.minHeight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   actionBtnText: {
     color: colors.text,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '900',
     textAlign: 'center',
   },
   inlineActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.gap,
-    marginTop: 8,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   inlineActionBtn: {
     flexGrow: 1,
     flexBasis: 140,
     minHeight: buttons.minHeight,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.borderSoft,
     borderRadius: radii.md,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pdfBtn: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.border,
     borderRadius: buttons.radius,
     paddingVertical: 14,
-    paddingHorizontal: 14,
+    paddingHorizontal: spacing.lg,
     minHeight: buttons.minHeight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: spacing.sm,
   },
   pdfBtnText: {
     color: colors.text,
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
     textAlign: 'center',
   },
   disabledBtn: {
     opacity: 0.65,
   },
   reportError: {
-    color: colors.ink,
+    color: colors.danger,
     fontSize: 13,
-    marginTop: 8,
+    marginTop: spacing.sm,
     textAlign: 'center',
   },
   saveBtn: {
     backgroundColor: colors.accent,
     borderRadius: buttons.radius,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: colors.accentInk,
+    paddingVertical: 15,
+    paddingHorizontal: spacing.lg,
     minHeight: buttons.minHeight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
-    ...shadows.card,
+    marginTop: spacing.md,
+    ...shadows.lift,
   },
   saveBtnText: {
     color: colors.white,
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
     textAlign: 'center',
   },
 });

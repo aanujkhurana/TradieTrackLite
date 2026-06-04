@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   Alert,
   StyleSheet,
   ScrollView,
 } from 'react-native';
 import { createJob } from '../data/jobs';
-import { buttons, colors, radii, shadows, spacing, typography } from '../theme';
+import {
+  FormInput,
+  LocalStorageNotice,
+  PrimaryButton,
+  ScreenHeader,
+  SectionCard,
+} from '../components/ui';
+import { colors, spacing } from '../theme';
 
 export default function CreateJob({ navigation }) {
   const [name, setName] = useState('');
@@ -73,32 +76,64 @@ export default function CreateJob({ navigation }) {
       contentContainerStyle={styles.contentContainer}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.formCard}>
-        <Text style={styles.formTitle}>New Job</Text>
-        <Text style={styles.formSubtitle}>Capture the essentials quickly while on-site.</Text>
+      <ScreenHeader
+        eyebrow="Job intake"
+        title="New Job"
+        subtitle="Capture the essentials quickly while on-site."
+      />
 
-        <Text style={styles.label}>Job Name *</Text>
-        <TextInput
-          style={[styles.input, nameError ? styles.inputError : null]}
+      <LocalStorageNotice>
+        No account required. This job is saved on this device unless you export it.
+      </LocalStorageNotice>
+
+      <SectionCard
+        eyebrow="Work"
+        title="Job docket"
+        subtitle="Keep the required fields short, then add detail only where it helps."
+      >
+        <FormInput
+          label="Job Name *"
           value={name}
           onChangeText={setName}
           placeholder="e.g. Fix kitchen tap"
           returnKeyType="next"
+          error={nameError}
         />
-        {nameError ? <Text style={styles.error}>{nameError}</Text> : null}
 
-        <Text style={styles.label}>Customer Name</Text>
-        <TextInput
-          style={styles.input}
+        <FormInput
+          label="Address *"
+          value={address}
+          onChangeText={setAddress}
+          placeholder="e.g. 12 Main St, Sydney"
+          returnKeyType="next"
+          error={addressError}
+        />
+
+        <FormInput
+          label="Job Notes"
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="Optional notes..."
+          multiline
+          numberOfLines={4}
+        />
+      </SectionCard>
+
+      <SectionCard
+        eyebrow="Customer"
+        title="Contact details"
+        subtitle="Separate customer info from the job title so reports stay tidy."
+      >
+        <FormInput
+          label="Customer Name"
           value={customerName}
           onChangeText={setCustomerName}
           placeholder="e.g. Sarah Williams"
           returnKeyType="next"
         />
 
-        <Text style={styles.label}>Customer Phone</Text>
-        <TextInput
-          style={styles.input}
+        <FormInput
+          label="Customer Phone"
           value={customerPhone}
           onChangeText={setCustomerPhone}
           placeholder="e.g. 0400 123 456"
@@ -106,9 +141,8 @@ export default function CreateJob({ navigation }) {
           returnKeyType="next"
         />
 
-        <Text style={styles.label}>Customer Email</Text>
-        <TextInput
-          style={styles.input}
+        <FormInput
+          label="Customer Email"
           value={customerEmail}
           onChangeText={setCustomerEmail}
           placeholder="e.g. sarah@example.com"
@@ -117,45 +151,22 @@ export default function CreateJob({ navigation }) {
           returnKeyType="next"
         />
 
-        <Text style={styles.label}>Customer Notes</Text>
-        <TextInput
-          style={[styles.input, styles.notesInput]}
+        <FormInput
+          label="Customer Notes"
           value={customerNotes}
           onChangeText={setCustomerNotes}
           placeholder="Optional customer-specific notes..."
           multiline
           numberOfLines={3}
         />
+      </SectionCard>
 
-        <Text style={styles.label}>Address *</Text>
-        <TextInput
-          style={[styles.input, addressError ? styles.inputError : null]}
-          value={address}
-          onChangeText={setAddress}
-          placeholder="e.g. 12 Main St, Sydney"
-          returnKeyType="next"
-        />
-        {addressError ? <Text style={styles.error}>{addressError}</Text> : null}
-
-        <Text style={styles.label}>Job Notes</Text>
-        <TextInput
-          style={[styles.input, styles.notesInput]}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Optional notes..."
-          multiline
-          numberOfLines={4}
-        />
-      </View>
-
-      <TouchableOpacity
-        style={[styles.saveBtn, saving && styles.disabledBtn]}
+      <PrimaryButton
+        title={saving ? 'Saving Job...' : 'Save Job'}
         onPress={handleSubmit}
-        activeOpacity={0.8}
         disabled={saving}
-      >
-        <Text style={styles.saveBtnText}>{saving ? 'Saving Job...' : 'Save Job'}</Text>
-      </TouchableOpacity>
+        style={styles.saveBtn}
+      />
     </ScrollView>
   );
 }
@@ -167,74 +178,9 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacing.screen,
-    paddingBottom: 40,
-  },
-  formCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.card,
-    width: '100%',
-    ...shadows.card,
-  },
-  formTitle: {
-    ...typography.title,
-    color: colors.ink,
-  },
-  formSubtitle: {
-    marginTop: 6,
-    marginBottom: 6,
-    color: colors.muted,
-    ...typography.small,
-  },
-  label: {
-    ...typography.label,
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 6,
-  },
-  input: {
-    backgroundColor: colors.surfaceInset,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    minHeight: 50,
-    color: colors.text,
-  },
-  inputError: {
-    borderColor: colors.ink,
-  },
-  notesInput: {
-    minHeight: 104,
-    textAlignVertical: 'top',
-  },
-  error: {
-    color: colors.ink,
-    fontSize: 13,
-    marginTop: 4,
+    paddingBottom: 42,
   },
   saveBtn: {
-    backgroundColor: colors.accent,
-    borderRadius: buttons.radius,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    minHeight: buttons.minHeight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.gap,
-    ...shadows.card,
-  },
-  saveBtnText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  disabledBtn: {
-    opacity: 0.65,
+    marginTop: spacing.sm,
   },
 });

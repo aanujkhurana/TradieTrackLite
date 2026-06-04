@@ -1,54 +1,91 @@
 export const colors = {
-  ink: '#111111',
-  text: '#1F1F1F',
-  muted: '#676767',
-  subtle: '#8A8A8A',
-  background: '#F6F6F4',
-  surface: '#FFFFFF',
-  surfaceAlt: '#F1F1EF',
-  surfaceInset: '#FAFAF8',
-  border: '#E3E3E0',
-  borderStrong: '#C9C9C5',
-  overlay: 'rgba(17, 17, 17, 0.72)',
+  ink: '#151411',
+  text: '#292722',
+  muted: '#69655B',
+  subtle: '#918B80',
+  background: '#F3F0EA',
+  canvas: '#E9E4D9',
+  surface: '#FFFCF6',
+  surfaceAlt: '#F8F5EE',
+  surfaceRaised: '#FFFDF8',
+  surfaceInset: '#ECE6DA',
+  border: '#D9D1C2',
+  borderSoft: '#E7DFD2',
+  borderStrong: '#B8AD9B',
+  overlay: 'rgba(21, 20, 17, 0.78)',
   white: '#FFFFFF',
-  accent: '#345C72',
-  accentSoft: '#EEF3F5',
+  accent: '#2F6C5F',
+  accentInk: '#153C35',
+  accentSoft: '#E5F0EC',
+  accentBorder: '#AFCFC5',
+  amber: '#B97912',
+  amberSoft: '#F4EBDD',
+  amberBorder: '#E0C090',
+  danger: '#8E332A',
+  dangerSoft: '#F3E5E1',
+  success: '#3F7355',
+  successSoft: '#E5EFE8',
+  graphite: '#27241F',
 };
 
 export const typography = {
-  title: {
-    fontSize: 22,
+  eyebrow: {
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '800',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
+  },
+  title: {
+    fontSize: 27,
+    lineHeight: 33,
+    fontWeight: '900',
+    letterSpacing: 0,
+  },
+  screenTitle: {
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '900',
     letterSpacing: 0,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '800',
     letterSpacing: 0,
   },
   body: {
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 23,
   },
   small: {
     fontSize: 13,
     lineHeight: 19,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '800',
     letterSpacing: 0,
     textTransform: 'uppercase',
   },
 };
 
 export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 28,
   screen: 20,
   card: 18,
   gap: 12,
+  section: 18,
 };
 
 export const radii = {
+  xs: 4,
   sm: 6,
   md: 8,
 };
@@ -56,14 +93,25 @@ export const radii = {
 export const shadows = {
   card: {
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
     elevation: 1,
+  },
+  lift: {
+    shadowColor: '#000',
+    shadowOpacity: 0.09,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 16 },
+    elevation: 2,
   },
 };
 
 export const buttons = {
-  minHeight: 52,
+  minHeight: 50,
   radius: radii.md,
+};
+
+export const motion = {
+  pressedOpacity: 0.72,
 };

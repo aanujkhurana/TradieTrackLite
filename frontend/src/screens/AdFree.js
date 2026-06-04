@@ -1,9 +1,9 @@
 import React from 'react';
 import {
   Alert,
+  ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import {
@@ -12,7 +12,14 @@ import {
   PURCHASE_PROVIDER,
 } from '../monetization/config';
 import { useMonetization } from '../monetization/MonetizationContext';
-import { buttons, colors, radii, shadows, spacing, typography } from '../theme';
+import {
+  LocalStorageNotice,
+  PrimaryButton,
+  ScreenHeader,
+  SecondaryButton,
+  SectionCard,
+} from '../components/ui';
+import { colors, radii, spacing, typography } from '../theme';
 
 function getPurchaseErrorMessage(err) {
   if (err?.code === 'PURCHASES_NOT_CONFIGURED') {
@@ -64,53 +71,67 @@ export default function AdFree() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.panel}>
-        <Text style={styles.title}>{isAdFree ? 'Ad-Free Active' : 'Remove Ads'}</Text>
-        <Text style={styles.body}>
-          {isAdFree
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+    >
+      <ScreenHeader
+        eyebrow="Ad-free upgrade"
+        title={isAdFree ? 'Ad-Free Active' : 'Remove Ads'}
+        subtitle={
+          isAdFree
             ? 'This device has a validated ad-free entitlement.'
-            : 'TradieTrack Lite stays free with small banner ads. A one-time purchase removes ads.'}
-        </Text>
+            : 'TradieTrack Lite stays free with controlled banner ads. One purchase removes them.'
+        }
+      />
 
-        <View style={styles.metaBox}>
-          <Text style={styles.metaLabel}>Ads</Text>
-          <Text style={styles.metaValue}>{ADS_PROVIDER}</Text>
-          <Text style={styles.metaLabel}>Purchase</Text>
-          <Text style={styles.metaValue}>{PURCHASE_PROVIDER}</Text>
-          <Text style={styles.metaLabel}>Product</Text>
-          <Text style={styles.metaValue}>{AD_FREE_PRODUCT_ID}</Text>
+      <LocalStorageNotice title="Simple and local">
+        The upgrade only controls ads. It does not add accounts, subscriptions, cloud sync, or required backend storage.
+      </LocalStorageNotice>
+
+      <SectionCard
+        eyebrow="One-time"
+        title={isAdFree ? 'Thanks for supporting TradieTrack Lite' : 'Keep the workspace clean'}
+        subtitle="Ads stay out of job creation, editing, report sharing, and other critical job-site actions."
+      >
+        <View style={styles.metaGrid}>
+          <View style={styles.metaBox}>
+            <Text style={styles.metaLabel}>Ads</Text>
+            <Text style={styles.metaValue}>{ADS_PROVIDER}</Text>
+          </View>
+          <View style={styles.metaBox}>
+            <Text style={styles.metaLabel}>Purchase</Text>
+            <Text style={styles.metaValue}>{PURCHASE_PROVIDER}</Text>
+          </View>
+          <View style={styles.metaBoxWide}>
+            <Text style={styles.metaLabel}>Product</Text>
+            <Text style={styles.metaValue}>{AD_FREE_PRODUCT_ID}</Text>
+          </View>
           {entitlement.purchasedAt ? (
-            <>
+            <View style={styles.metaBoxWide}>
               <Text style={styles.metaLabel}>Unlocked</Text>
               <Text style={styles.metaValue}>{entitlement.purchasedAt}</Text>
-            </>
+            </View>
           ) : null}
         </View>
 
         {!isAdFree ? (
-          <TouchableOpacity
-            style={[styles.primaryBtn, isBusy && styles.disabledBtn]}
+          <PrimaryButton
+            title={isBusy ? 'Checking Store...' : 'Buy Ad-Free'}
             onPress={handlePurchase}
-            activeOpacity={0.8}
             disabled={isBusy}
-          >
-            <Text style={styles.primaryBtnText}>
-              {isBusy ? 'Checking Store...' : 'Buy Ad-Free'}
-            </Text>
-          </TouchableOpacity>
+            style={styles.primaryBtn}
+          />
         ) : null}
 
-        <TouchableOpacity
-          style={[styles.secondaryBtn, isBusy && styles.disabledBtn]}
+        <SecondaryButton
+          title="Restore Purchase"
           onPress={handleRestore}
-          activeOpacity={0.8}
           disabled={isBusy}
-        >
-          <Text style={styles.secondaryBtnText}>Restore Purchase</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          style={styles.secondaryBtn}
+        />
+      </SectionCard>
+    </ScrollView>
   );
 }
 
@@ -118,75 +139,48 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  contentContainer: {
     padding: spacing.screen,
+    paddingBottom: 42,
   },
-  panel: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.card,
-    ...shadows.card,
-  },
-  title: {
-    color: colors.ink,
-    ...typography.title,
-  },
-  body: {
-    color: colors.muted,
-    ...typography.body,
-    marginTop: 8,
+  metaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   metaBox: {
+    flexGrow: 1,
+    flexBasis: 130,
     backgroundColor: colors.surfaceAlt,
-    borderRadius: radii.md,
+    borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: colors.border,
-    marginTop: 16,
-    padding: 12,
+    borderColor: colors.borderSoft,
+    padding: spacing.md,
+  },
+  metaBoxWide: {
+    flexBasis: '100%',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    padding: spacing.md,
   },
   metaLabel: {
     color: colors.subtle,
     ...typography.label,
-    marginTop: 8,
   },
   metaValue: {
     color: colors.text,
     fontSize: 14,
-    fontWeight: '600',
-    marginTop: 2,
+    lineHeight: 20,
+    fontWeight: '700',
+    marginTop: spacing.xs,
   },
   primaryBtn: {
-    backgroundColor: colors.accent,
-    borderRadius: buttons.radius,
-    alignItems: 'center',
-    marginTop: 18,
-    paddingVertical: 16,
-    minHeight: buttons.minHeight,
-    justifyContent: 'center',
-  },
-  primaryBtnText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '800',
+    marginTop: spacing.lg,
   },
   secondaryBtn: {
-    backgroundColor: colors.surface,
-    borderColor: colors.borderStrong,
-    borderRadius: buttons.radius,
-    borderWidth: 1,
-    alignItems: 'center',
-    marginTop: 12,
-    paddingVertical: 14,
-    minHeight: buttons.minHeight,
-    justifyContent: 'center',
-  },
-  secondaryBtnText: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  disabledBtn: {
-    opacity: 0.65,
+    marginTop: spacing.md,
   },
 });
