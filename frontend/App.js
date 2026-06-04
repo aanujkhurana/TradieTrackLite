@@ -6,13 +6,32 @@ import CreateJob from './src/screens/CreateJob';
 import JobDetail from './src/screens/JobDetail';
 import AdFree from './src/screens/AdFree';
 import { MonetizationProvider } from './src/monetization/MonetizationContext';
+import { colors } from './src/theme';
 
 const Stack = createStackNavigator();
 
 function AppNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Jobs">
+      <Stack.Navigator
+        initialRouteName="Jobs"
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: colors.surface,
+            shadowColor: 'transparent',
+          },
+          headerTintColor: colors.ink,
+          headerTitleStyle: {
+            color: colors.ink,
+            fontSize: 18,
+            fontWeight: '800',
+          },
+          headerBackTitleVisible: false,
+          cardStyle: {
+            backgroundColor: colors.background,
+          },
+        }}
+      >
         <Stack.Screen
           name="Jobs"
           component={Jobs}

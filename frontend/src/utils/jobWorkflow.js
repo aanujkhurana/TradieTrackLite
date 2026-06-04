@@ -1,7 +1,9 @@
+import { colors } from '../theme';
+
 export const STATUS_OPTIONS = [
-  { key: 'pending', label: 'Pending', color: '#7D8597' },
-  { key: 'in_progress', label: 'In Progress', color: '#2196F3' },
-  { key: 'completed', label: 'Completed', color: '#4CAF50' },
+  { key: 'pending', label: 'Pending', color: colors.subtle },
+  { key: 'in_progress', label: 'In Progress', color: colors.accent },
+  { key: 'completed', label: 'Completed', color: colors.ink },
 ];
 
 export const STATUS_FILTERS = [

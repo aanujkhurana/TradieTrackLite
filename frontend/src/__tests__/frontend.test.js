@@ -123,6 +123,7 @@ import {
   AD_FREE_PRODUCT_ID,
   getAdMobBannerUnitId,
 } from '../monetization/config';
+import { colors } from '../theme';
 import {
   loadAdFreeEntitlement,
   saveAdFreeEntitlement,
@@ -150,9 +151,9 @@ function isValidISODate(str) {
 
 /** Status → colour mapping from Jobs.js */
 const STATUS_COLOURS = {
-  pending: '#7D8597',
-  in_progress: '#2196F3',
-  completed: '#4CAF50',
+  pending: colors.subtle,
+  in_progress: colors.accent,
+  completed: colors.ink,
 };
 
 // ---------------------------------------------------------------------------
@@ -236,8 +237,8 @@ describe('Property 10: Status badge colour mapping', () => {
   /**
    * Validates: Requirements 2.3
    *
-   * For each valid status value the colour SHALL match the defined mapping:
-   * pending=grey (#888), in_progress=blue (#2196F3), completed=green (#4CAF50).
+   * For each valid status value the colour SHALL match the defined
+   * monochrome/accent mapping.
    */
   it('maps every valid status to the correct colour', () => {
     fc.assert(
@@ -253,16 +254,16 @@ describe('Property 10: Status badge colour mapping', () => {
     );
   });
 
-  it('pending maps to grey (#888)', () => {
-    expect(STATUS_COLOURS['pending']).toBe('#7D8597');
+  it('pending maps to subtle grey', () => {
+    expect(STATUS_COLOURS['pending']).toBe(colors.subtle);
   });
 
-  it('in_progress maps to blue (#2196F3)', () => {
-    expect(STATUS_COLOURS['in_progress']).toBe('#2196F3');
+  it('in_progress maps to the single accent', () => {
+    expect(STATUS_COLOURS['in_progress']).toBe(colors.accent);
   });
 
-  it('completed maps to green (#4CAF50)', () => {
-    expect(STATUS_COLOURS['completed']).toBe('#4CAF50');
+  it('completed maps to ink', () => {
+    expect(STATUS_COLOURS['completed']).toBe(colors.ink);
   });
 });
 

@@ -24,12 +24,12 @@ module.exports = {
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',
-      backgroundColor: '#1565C0',
+      backgroundColor: '#FFFFFF',
     },
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
-        backgroundColor: '#1565C0',
+        backgroundColor: '#FFFFFF',
       },
     },
     plugins,

@@ -2,6 +2,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { formatLoggedDuration } from '../utils/time';
+import { colors } from '../theme';
 
 const STATUS_LABELS = {
   pending: 'Pending',
@@ -84,7 +85,7 @@ export async function buildJobReportHtml(job) {
         <meta charset="utf-8" />
         <style>
           body {
-            color: #1f2937;
+            color: ${colors.text};
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             font-size: 13px;
             line-height: 1.45;
@@ -95,13 +96,13 @@ export async function buildJobReportHtml(job) {
             margin: 0 0 6px;
           }
           h2 {
-            border-bottom: 1px solid #d9e0e8;
+            border-bottom: 1px solid ${colors.border};
             font-size: 16px;
             margin: 24px 0 10px;
             padding-bottom: 6px;
           }
           .meta {
-            color: #64748b;
+            color: ${colors.muted};
             margin-bottom: 18px;
           }
           table {
@@ -110,19 +111,19 @@ export async function buildJobReportHtml(job) {
           }
           th,
           td {
-            border-bottom: 1px solid #edf1f5;
+            border-bottom: 1px solid ${colors.border};
             padding: 8px 6px;
             text-align: left;
             vertical-align: top;
           }
           th {
-            color: #475569;
+            color: ${colors.muted};
             font-weight: 700;
             width: 155px;
           }
           .notes {
-            background: #f8fafc;
-            border: 1px solid #d9e0e8;
+            background: ${colors.surfaceInset};
+            border: 1px solid ${colors.border};
             border-radius: 6px;
             min-height: 48px;
             padding: 10px;
@@ -134,14 +135,14 @@ export async function buildJobReportHtml(job) {
             gap: 10px;
           }
           .photo {
-            border: 1px solid #d9e0e8;
+            border: 1px solid ${colors.border};
             border-radius: 6px;
             height: 180px;
             object-fit: cover;
             width: 180px;
           }
           .muted {
-            color: #64748b;
+            color: ${colors.muted};
           }
         </style>
       </head>
