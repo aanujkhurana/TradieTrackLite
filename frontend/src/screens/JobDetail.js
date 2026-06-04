@@ -448,6 +448,50 @@ export default function JobDetail({ route, navigation }) {
       </LocalStorageNotice>
 
       <SectionCard
+        eyebrow="Snapshot"
+        title="At a glance"
+        subtitle="The essentials before you edit the full record."
+      >
+        <View style={styles.snapshotGrid}>
+          <View style={styles.snapshotTile}>
+            <Text style={styles.snapshotLabel}>Workflow</Text>
+            <Text style={styles.snapshotValue}>Current: {statusMeta.label}</Text>
+          </View>
+          <View style={styles.snapshotTile}>
+            <Text style={styles.snapshotLabel}>Photo count</Text>
+            <Text style={styles.snapshotValue}>
+              {photos.length === 1 ? '1 saved' : `${photos.length} saved`}
+            </Text>
+          </View>
+          <View style={[
+            styles.snapshotTile,
+            reminderState.key === 'overdue' && styles.snapshotTileWarning,
+          ]}>
+            <Text style={[
+              styles.snapshotLabel,
+              reminderState.key === 'overdue' && styles.snapshotLabelWarning,
+            ]}>
+              Reminder
+            </Text>
+            <Text style={[
+              styles.snapshotValue,
+              reminderState.key === 'overdue' && styles.snapshotValueWarning,
+            ]}>
+              {reminderState.key === 'overdue'
+                ? 'Needs follow-up'
+                : reminderState.key === 'scheduled'
+                  ? 'Local alert set'
+                  : 'No local alert'}
+            </Text>
+          </View>
+          <View style={styles.snapshotTile}>
+            <Text style={styles.snapshotLabel}>Logged</Text>
+            <Text style={styles.snapshotValue}>{totalLoggedTime}</Text>
+          </View>
+        </View>
+      </SectionCard>
+
+      <SectionCard
         eyebrow="Summary"
         title="Job Details"
         subtitle="A clear work record for the customer, location, notes, and follow-up actions."
@@ -687,6 +731,44 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderSoft,
+  },
+  snapshotGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  snapshotTile: {
+    flexGrow: 1,
+    flexBasis: 132,
+    minHeight: 74,
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  snapshotTileWarning: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.danger,
+  },
+  snapshotLabel: {
+    ...typography.label,
+    color: colors.subtle,
+    marginBottom: spacing.xs,
+  },
+  snapshotLabelWarning: {
+    color: colors.danger,
+  },
+  snapshotValue: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: '900',
+    lineHeight: 20,
+  },
+  snapshotValueWarning: {
+    color: colors.danger,
   },
   pageHeader: {
     paddingBottom: spacing.xl,
