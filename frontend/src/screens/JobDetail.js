@@ -636,7 +636,7 @@ export default function JobDetail({ route, navigation }) {
       >
         <SecondaryButton title="Add Photo" onPress={addPhoto} style={styles.actionBtn} />
 
-        {photos.length > 0 && (
+        {photos.length > 0 ? (
           <FlatList
             data={photos}
             keyExtractor={(item, index) => `${item}-${index}`}
@@ -656,6 +656,16 @@ export default function JobDetail({ route, navigation }) {
               </View>
             )}
           />
+        ) : (
+          <View style={styles.photoEmptyPanel}>
+            <View style={styles.photoEmptyIcon}>
+              <Text style={styles.photoEmptyIconText}>+</Text>
+            </View>
+            <Text style={styles.photoEmptyTitle}>No photos attached</Text>
+            <Text style={styles.photoEmptyText}>
+              Capture job progress, parts, damage, or completed work. Photos are copied into local app storage.
+            </Text>
+          </View>
         )}
       </SectionCard>
 
@@ -697,6 +707,20 @@ export default function JobDetail({ route, navigation }) {
         title="Share a job report"
         subtitle="Build a local PDF summary with customer details, notes, time, and photos."
       >
+        <View style={styles.reportPreview}>
+          <View style={styles.reportPreviewHeader}>
+            <Text style={styles.reportPreviewTitle}>Report includes</Text>
+            <Text style={styles.reportPreviewBadge}>PDF</Text>
+          </View>
+          <View style={styles.reportPreviewGrid}>
+            <Text style={styles.reportPreviewItem}>Job details</Text>
+            <Text style={styles.reportPreviewItem}>Customer info</Text>
+            <Text style={styles.reportPreviewItem}>Time logged</Text>
+            <Text style={styles.reportPreviewItem}>
+              {photos.length === 1 ? '1 photo' : `${photos.length} photos`}
+            </Text>
+          </View>
+        </View>
         <SecondaryButton
           title={reportLoading ? 'Building Report...' : 'Share Job Report'}
           onPress={shareCurrentJobReport}
@@ -971,6 +995,45 @@ const styles = StyleSheet.create({
     height: PHOTO_SIZE,
     margin: 2,
   },
+  photoEmptyPanel: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    marginTop: spacing.md,
+    minHeight: 168,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+  },
+  photoEmptyIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accentBorder,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+    width: 48,
+  },
+  photoEmptyIconText: {
+    color: colors.accentInk,
+    fontSize: 24,
+    fontWeight: '900',
+    lineHeight: 28,
+  },
+  photoEmptyTitle: {
+    ...typography.sectionTitle,
+    color: colors.ink,
+    textAlign: 'center',
+  },
+  photoEmptyText: {
+    ...typography.small,
+    color: colors.muted,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
   photoDeleteBtn: {
     position: 'absolute',
     top: 4,
@@ -1051,6 +1114,52 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: spacing.sm,
     textAlign: 'center',
+  },
+  reportPreview: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    padding: spacing.lg,
+  },
+  reportPreviewHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  reportPreviewTitle: {
+    ...typography.sectionTitle,
+    color: colors.ink,
+  },
+  reportPreviewBadge: {
+    backgroundColor: colors.ink,
+    borderRadius: radii.sm,
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  reportPreviewGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  reportPreviewItem: {
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    color: colors.text,
+    flexGrow: 1,
+    flexBasis: 130,
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   saveBtn: {
     backgroundColor: colors.accent,
