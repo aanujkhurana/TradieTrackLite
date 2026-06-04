@@ -149,6 +149,7 @@ import {
 import CreateJob from '../screens/CreateJob';
 import Jobs from '../screens/Jobs';
 import JobDetail from '../screens/JobDetail';
+import Settings from '../screens/Settings';
 
 // ---------------------------------------------------------------------------
 // Pure logic helpers (extracted from screen logic for property testing)
@@ -664,6 +665,33 @@ describe('Jobs screen mobile polish', () => {
       expect(listJobs).toHaveBeenCalledTimes(2);
       expect(getByText('No jobs yet')).toBeTruthy();
     });
+  });
+});
+
+describe('Settings screen', () => {
+  const mockNavigation = { navigate: jest.fn() };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('shows local-first storage, backup, ad-free, privacy, and version sections', () => {
+    const { getByText } = render(<Settings navigation={mockNavigation} />);
+
+    expect(getByText('Settings')).toBeTruthy();
+    expect(getByText('Data ownership')).toBeTruthy();
+    expect(getByText('Export Backup')).toBeTruthy();
+    expect(getByText('Ad-free upgrade')).toBeTruthy();
+    expect(getByText('Data safety')).toBeTruthy();
+    expect(getByText('Version')).toBeTruthy();
+  });
+
+  it('opens ad-free management from the settings plan row', () => {
+    const { getByText } = render(<Settings navigation={mockNavigation} />);
+
+    fireEvent.press(getByText('Manage'));
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('AdFree');
   });
 });
 
