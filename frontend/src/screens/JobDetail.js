@@ -12,7 +12,6 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
 import { updateJob } from '../data/jobs';
@@ -26,6 +25,7 @@ import { STATUS_OPTIONS, getReminderState } from '../utils/jobWorkflow';
 import { shareJobReport } from '../data/reports';
 import { formatLoggedDuration } from '../utils/time';
 import { buttons, colors, radii, shadows, spacing, typography } from '../theme';
+import { hasNativeModule, isExpoGo } from '../runtime';
 
 const PHOTO_SIZE = Math.floor((Dimensions.get('window').width - 32 - 8) / 3);
 const formatDateLabel = (value, fallback = 'Not set') => {
@@ -34,7 +34,7 @@ const formatDateLabel = (value, fallback = 'Not set') => {
 };
 
 function getDateTimePicker() {
-  if (Constants.appOwnership === 'expo') {
+  if (isExpoGo() || !hasNativeModule(['RNDateTimePicker'])) {
     return null;
   }
 

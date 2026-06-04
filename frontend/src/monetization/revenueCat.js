@@ -1,16 +1,20 @@
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 import {
   AD_FREE_ENTITLEMENT_ID,
   AD_FREE_PRODUCT_ID,
   PURCHASE_PROVIDER,
   getRevenueCatApiKey,
 } from './config';
+import { hasNativeModule, isExpoGo } from '../runtime';
 
 let configuredApiKey = null;
 
 function getPurchasesModule() {
-  if (Constants.appOwnership === 'expo') {
+  if (!isExpoGo() && !hasNativeModule(['RNPurchases'])) {
+    return null;
+  }
+
+  if (isExpoGo()) {
     return null;
   }
 

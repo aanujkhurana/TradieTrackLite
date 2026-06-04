@@ -1,4 +1,5 @@
 import React from 'react';
+import { LogBox } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Jobs from './src/screens/Jobs';
@@ -9,6 +10,10 @@ import { MonetizationProvider } from './src/monetization/MonetizationContext';
 import { colors } from './src/theme';
 
 const Stack = createStackNavigator();
+
+LogBox.ignoreLogs([
+  'Constants.platform.ios.model has been deprecated',
+]);
 
 function AppNavigator() {
   return (

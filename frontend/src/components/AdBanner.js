@@ -1,11 +1,11 @@
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import Constants from 'expo-constants';
 import { getAdMobBannerUnitId } from '../monetization/config';
 import { useMonetization } from '../monetization/MonetizationContext';
+import { hasNativeModule } from '../runtime';
 
 function getGoogleMobileAdsModule() {
-  if (Constants.appOwnership === 'expo') {
+  if (!hasNativeModule(['RNGoogleMobileAdsModule'])) {
     return null;
   }
 
