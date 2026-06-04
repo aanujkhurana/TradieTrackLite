@@ -184,15 +184,34 @@ export default function Jobs({ navigation }) {
 
   const renderFilters = () => (
     <View style={styles.filtersPanel}>
-      <Text style={styles.sectionEyebrow}>Find</Text>
-      <TextInput
-        style={styles.searchInput}
-        value={searchTerm}
-        onChangeText={setSearchTerm}
-        placeholder="Search title, customer, address, or notes"
-        placeholderTextColor={colors.subtle}
-        returnKeyType="search"
-      />
+      <View style={styles.filterHeader}>
+        <View>
+          <Text style={styles.sectionEyebrow}>Find</Text>
+          <Text style={styles.filterTitle}>Search and filter</Text>
+        </View>
+        <Text style={styles.filterCount}>
+          {visibleJobs.length} shown
+        </Text>
+      </View>
+      <View style={styles.searchShell}>
+        <Text style={styles.searchIcon}>Search</Text>
+        <TextInput
+          style={styles.searchInput}
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+          placeholder="Search title, customer, address, or notes"
+          placeholderTextColor={colors.subtle}
+          returnKeyType="search"
+        />
+        {searchTerm ? (
+          <Pressable
+            style={({ pressed }) => [styles.clearSearchBtn, pressed && styles.controlPressed]}
+            onPress={() => setSearchTerm('')}
+          >
+            <Text style={styles.clearSearchText}>Clear</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <View style={styles.filterRow}>
         {STATUS_FILTERS.map((filter) => {
           const active = statusFilter === filter.key;
@@ -620,16 +639,68 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSoft,
     ...shadows.card,
   },
-  searchInput: {
+  filterHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  filterTitle: {
+    ...typography.sectionTitle,
+    color: colors.ink,
+  },
+  filterCount: {
     backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.sm,
     borderWidth: 1,
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '900',
+    minHeight: 32,
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  searchShell: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.borderSoft,
     borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 13,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
+  },
+  searchIcon: {
+    color: colors.accentInk,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  searchInput: {
+    color: colors.text,
+    flex: 1,
     fontSize: 15,
     minHeight: 50,
-    color: colors.text,
+    paddingHorizontal: 0,
+    paddingVertical: 13,
+  },
+  clearSearchBtn: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.borderSoft,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 34,
+    paddingHorizontal: spacing.sm,
+  },
+  clearSearchText: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '900',
   },
   filterRow: {
     flexDirection: 'row',
