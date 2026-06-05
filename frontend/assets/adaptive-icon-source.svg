@@ -1,0 +1,10 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Foreground transparent. Android adds a colored background per adaptiveIcon. -->
+  <rect x="0" y="0" width="1024" height="1024" fill="none"/>
+  <!-- Centered T monogram, safe area is central 66% (Android adaptive icon mask) -->
+  <g transform="translate(512 512)">
+    <rect x="-208" y="-216" width="416" height="76" rx="38" fill="#F4EFE4"/>
+    <rect x="-38" y="-216" width="76" height="436" rx="38" fill="#F4EFE4"/>
+    <circle cx="260" cy="260" r="44" fill="#7DBDA9"/>
+  </g>
+</svg>

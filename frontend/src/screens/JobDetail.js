@@ -1,52 +1,63 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  Pressable,
-  Image,
-  FlatList,
-  ScrollView,
   Alert,
-  Linking,
-  StyleSheet,
   Dimensions,
+  Image,
+  Linking,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
 import { updateJob } from '../data/jobs';
 import {
-  appendPhotoUri,
   deleteStoredJobPhoto,
-  removePhotoUriAtIndex,
   storeJobPhoto,
 } from '../data/photos';
-import { STATUS_OPTIONS, getReminderState } from '../utils/jobWorkflow';
+import { getReminderState, STATUS_LABELS, JOB_STATUS_KEYS } from '../utils/jobWorkflow';
 import { shareJobReport } from '../data/reports';
 import { formatLoggedDuration } from '../utils/time';
 import {
+  AppShell,
   ChipButton,
+  DateTimePickerRow,
   FormInput,
-  InfoRow,
+  IconButton,
   LocalStorageNotice,
+  PhotoGrid,
   PrimaryButton,
+  ReportActionCard,
   ScreenHeader,
   SecondaryButton,
-  SectionCard,
+  Section,
+  StatusChip,
+  StatTile,
 } from '../components/ui';
-import { buttons, colors, radii, shadows, spacing, typography } from '../theme';
+import { Icon } from '../components/Icon';
+import { useTheme } from '../theme';
 import { hasNativeModule, isExpoGo } from '../runtime';
 
-const PHOTO_SIZE = Math.floor((Dimensions.get('window').width - 32 - 8) / 3);
-const formatDateLabel = (value, fallback = 'Not set') => {
-  if (!value) return fallback;
-  return value.toLocaleString();
-};
+const PHOTO_COLUMNS = 3;
+const SCREEN_PADDING = 20;
+const PHOTO_GAP = 8;
+const PHOTO_SIZE = Math.floor(
+  (Dimensions.get('window').width - SCREEN_PADDING * 2 - PHOTO_GAP * (PHOTO_COLUMNS - 1)) /
+    PHOTO_COLUMNS
+);
+
+const STATUS_ORDER = [
+  { key: 'pending', label: STATUS_LABELS.pending },
+  { key: 'in_progress', label: STATUS_LABELS.in_progress },
+  { key: 'completed', label: STATUS_LABELS.completed },
+];
 
 function getDateTimePicker() {
   if (isExpoGo() || !hasNativeModule(['RNDateTimePicker'])) {
     return null;
   }
-
   try {
     const dateTimePickerModule = require('@react-native-community/datetimepicker');
     return dateTimePickerModule.default || dateTimePickerModule;
@@ -57,61 +68,47 @@ function getDateTimePicker() {
 
 export default function JobDetail({ route, navigation }) {
   const { job } = route.params;
+  const { colors, status } = useTheme();
 
   const [name, setName] = useState(job.name || '');
   const [customerName, setCustomerName] = useState(job.customerName || '');
   const [customerPhone, setCustomerPhone] = useState(job.customerPhone || '');
   const [customerEmail, setCustomerEmail] = useState(job.customerEmail || '');
-  const [customerNotes, setCustomerNotes] = useState(job.customerNotes || '');
   const [address, setAddress] = useState(job.address || '');
   const [notes, setNotes] = useState(job.notes || '');
-  const [status, setStatus] = useState(job.status || 'pending');
+  const [statusValue, setStatusValue] = useState(job.status || 'pending');
   const [photos, setPhotos] = useState(job.photos || []);
   const [startDate, setStartDate] = useState(
     job.startDate ? new Date(job.startDate) : job.createdAt ? new Date(job.createdAt) : new Date()
   );
   const [endDate, setEndDate] = useState(job.endDate ? new Date(job.endDate) : null);
-
-  const [reminder, setReminder] = useState(
-    job.reminder ? new Date(job.reminder) : null
-  );
+  const [reminder, setReminder] = useState(job.reminder ? new Date(job.reminder) : null);
   const [reminderNotificationId, setReminderNotificationId] = useState(
     job.reminderNotificationId || null
   );
-  const [activePicker, setActivePicker] = useState(null); // startDate | endDate | reminder
+  const [activePicker, setActivePicker] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState(null);
+
   const totalLoggedTime = useMemo(
     () => formatLoggedDuration(startDate, endDate),
     [startDate, endDate]
   );
   const reminderState = useMemo(
-    () => getReminderState({ status, reminder }),
-    [reminder, status]
+    () => getReminderState({ status: statusValue, reminder }),
+    [reminder, statusValue]
   );
-  const statusMeta = STATUS_OPTIONS.find((opt) => opt.key === status) || STATUS_OPTIONS[0];
+  const statusTone = status[statusValue] || status.pending;
+  const isCompleted = statusValue === 'completed';
 
-
-  const handleStorageError = (err) => {
-    if (err.code === 'NOT_FOUND') {
-      Alert.alert('Not Found', 'Job not found', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
-    } else if (err.code === 'VALIDATION_ERROR') {
-      Alert.alert('Validation Error', err.message);
-    } else {
-      Alert.alert(
-        'Local Storage Error',
-        'Job changes could not be saved on this device. No internet is required, so try again from this local job screen.'
-      );
-    }
-  };
   const openDeviceSettings = () => {
     if (Linking.openSettings) {
       Linking.openSettings();
     }
   };
+
   const openCustomerLink = async (url, fallbackTitle, fallbackMessage) => {
     try {
       await Linking.openURL(url);
@@ -119,90 +116,101 @@ export default function JobDetail({ route, navigation }) {
       Alert.alert(fallbackTitle, fallbackMessage);
     }
   };
+
   const callCustomer = async () => {
     const dialablePhone = customerPhone.replace(/[^\d+]/g, '');
     if (!dialablePhone) {
-      Alert.alert('No Phone Number', 'Add a customer phone number before calling.');
+      Alert.alert('No phone number', 'Add a customer phone number before calling.');
       return;
     }
-
     await openCustomerLink(
       `tel:${dialablePhone}`,
-      'Call Unavailable',
+      'Call unavailable',
       'This device could not start a phone call. The job details are still saved locally.'
     );
   };
+
   const messageCustomer = async () => {
     const dialablePhone = customerPhone.replace(/[^\d+]/g, '');
     if (!dialablePhone) {
-      Alert.alert('No Phone Number', 'Add a customer phone number before messaging.');
+      Alert.alert('No phone number', 'Add a customer phone number before messaging.');
       return;
     }
-
     await openCustomerLink(
       `sms:${dialablePhone}`,
-      'Message Unavailable',
+      'Message unavailable',
       'This device could not start a text message. The job details are still saved locally.'
     );
   };
+
   const emailCustomer = async () => {
     const email = customerEmail.trim();
     if (!email) {
-      Alert.alert('No Email Address', 'Add a customer email address before emailing.');
+      Alert.alert('No email address', 'Add a customer email address before emailing.');
       return;
     }
-
     await openCustomerLink(
       `mailto:${email}`,
-      'Email Unavailable',
+      'Email unavailable',
       'This device could not start an email. The job details are still saved locally.'
     );
   };
+
+  const handleStorageError = (err) => {
+    if (err.code === 'NOT_FOUND') {
+      Alert.alert('Not found', 'This job is no longer on this device.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } else if (err.code === 'VALIDATION_ERROR') {
+      Alert.alert('Validation error', err.message);
+    } else {
+      Alert.alert(
+        'Local storage error',
+        'Job changes could not be saved on this device. No internet is required, so try again from this local job screen.'
+      );
+    }
+  };
+
   const save = async () => {
     if (saving) return;
-
     if (!name.trim() || !address.trim()) {
-      Alert.alert('Validation Error', 'Job name and address are required.');
+      Alert.alert('Validation error', 'Job name and address are required.');
       return;
     }
-
     let resolvedEndDate = endDate;
-    if (status === 'completed' && !resolvedEndDate) {
+    if (statusValue === 'completed' && !resolvedEndDate) {
       resolvedEndDate = new Date();
     }
-
-    if (startDate && resolvedEndDate && resolvedEndDate.getTime() < startDate.getTime()) {
-      Alert.alert('Invalid Time Range', 'Job end date must be after the start date.');
+    if (
+      startDate &&
+      resolvedEndDate &&
+      resolvedEndDate.getTime() < startDate.getTime()
+    ) {
+      Alert.alert('Invalid time range', 'Job end date must be after the start date.');
       return;
     }
-
     try {
       setSaving(true);
       const nextReminderIso = reminder ? reminder.toISOString() : null;
       const nextReminderNotificationId = await prepareReminderNotification(nextReminderIso);
-
       await updateJob(job._id, {
         name: name.trim(),
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         customerEmail: customerEmail.trim(),
-        customerNotes,
         address: address.trim(),
         notes,
-        status,
+        status: statusValue,
         photos,
         startDate: startDate ? startDate.toISOString() : null,
         endDate: resolvedEndDate ? resolvedEndDate.toISOString() : null,
         reminder: nextReminderIso,
         reminderNotificationId: nextReminderNotificationId,
       });
-
       if (resolvedEndDate && !endDate) {
         setEndDate(resolvedEndDate);
       }
-
       setReminderNotificationId(nextReminderNotificationId);
-
       navigation.goBack();
     } catch (err) {
       handleStorageError(err);
@@ -210,33 +218,30 @@ export default function JobDetail({ route, navigation }) {
       setSaving(false);
     }
   };
-  // ── Photo capture (9.3) ───────────────────────────────────────────────────
 
   const addPhoto = async () => {
     try {
       const { status: permStatus } = await ImagePicker.requestCameraPermissionsAsync();
       if (permStatus !== 'granted') {
         Alert.alert(
-          'Camera Access Needed',
+          'Camera access needed',
           'Job photos stay on this device. Enable camera access in Settings to add photos while on site.',
           [
-            { text: 'Not Now', style: 'cancel' },
-            { text: 'Open Settings', onPress: openDeviceSettings },
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open settings', onPress: openDeviceSettings },
           ]
         );
         return;
       }
-
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: false,
         quality: 0.8,
       });
-
       if (!result.canceled) {
         const uri = result.assets?.[0]?.uri ?? result.uri;
         if (uri) {
           const localUri = await storeJobPhoto(uri);
-          const nextPhotos = appendPhotoUri(photos, localUri);
+          const nextPhotos = [...photos, localUri];
           try {
             await updateJob(job._id, { photos: nextPhotos });
             setPhotos(nextPhotos);
@@ -248,7 +253,7 @@ export default function JobDetail({ route, navigation }) {
       }
     } catch (err) {
       Alert.alert(
-        'Photo Storage Error',
+        'Photo storage error',
         'Photo could not be saved in app storage on this device. Try again after checking local storage space and camera access.'
       );
     }
@@ -256,7 +261,7 @@ export default function JobDetail({ route, navigation }) {
 
   const deletePhoto = (uri, index) => {
     Alert.alert(
-      'Delete Photo',
+      'Delete photo',
       'Remove this photo from the job?',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -265,13 +270,13 @@ export default function JobDetail({ route, navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              const nextPhotos = removePhotoUriAtIndex(photos, index);
+              const nextPhotos = photos.filter((_, i) => i !== index);
               await updateJob(job._id, { photos: nextPhotos });
               await deleteStoredJobPhoto(uri);
               setPhotos(nextPhotos);
             } catch (err) {
               Alert.alert(
-                'Photo Storage Error',
+                'Photo storage error',
                 'Photo file could not be removed from local app storage on this device.'
               );
             }
@@ -281,47 +286,40 @@ export default function JobDetail({ route, navigation }) {
     );
   };
 
-  // ── Reminder / notifications (9.4) ───────────────────────────────────────
-
   const cancelReminderNotification = async (notificationId) => {
     if (!notificationId) return;
-
     try {
       await Notifications.cancelScheduledNotificationAsync(notificationId);
     } catch {
-      // A missing or already-fired notification should not block saving the job.
+      // ignore
     }
   };
 
   const scheduleReminder = async (date) => {
-    if (!date || date.getTime() <= Date.now()) {
-      return null;
-    }
-
+    if (!date || date.getTime() <= Date.now()) return null;
     const { status: permStatus } = await Notifications.requestPermissionsAsync();
     if (permStatus !== 'granted') {
       Alert.alert(
-        'Notifications Disabled',
+        'Notifications disabled',
         'Reminder saved locally, but notifications are disabled. Enable them in Settings to receive alerts.',
         [
-          { text: 'Not Now', style: 'cancel' },
-          { text: 'Open Settings', onPress: openDeviceSettings },
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open settings', onPress: openDeviceSettings },
         ]
       );
       return null;
     }
-
     try {
       return await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'TradieTrack Reminder',
+          title: 'TradieTrack reminder',
           body: `Follow up on job: ${name.trim() || 'Untitled job'}`,
         },
         trigger: date,
       });
     } catch {
       Alert.alert(
-        'Reminder Saved',
+        'Reminder saved',
         'Reminder saved locally, but the notification could not be scheduled on this device.'
       );
       return null;
@@ -332,22 +330,19 @@ export default function JobDetail({ route, navigation }) {
     const previousReminderIso = job.reminder || null;
     const previousNotificationId = job.reminderNotificationId || reminderNotificationId;
     const reminderChanged = previousReminderIso !== nextReminderIso;
-
     if (!nextReminderIso) {
       await cancelReminderNotification(previousNotificationId);
       return null;
     }
-
     if (!reminderChanged && previousNotificationId) {
       return previousNotificationId;
     }
-
     await cancelReminderNotification(previousNotificationId);
     return scheduleReminder(new Date(nextReminderIso));
   };
+
   const applyPickedDate = (field, pickedDate) => {
     if (!pickedDate) return;
-
     if (field === 'startDate') {
       setStartDate(pickedDate);
       if (endDate && pickedDate.getTime() > endDate.getTime()) {
@@ -355,12 +350,10 @@ export default function JobDetail({ route, navigation }) {
       }
       return;
     }
-
     if (field === 'endDate') {
       setEndDate(pickedDate);
       return;
     }
-
     if (field === 'reminder') {
       setReminder(pickedDate);
     }
@@ -396,230 +389,205 @@ export default function JobDetail({ route, navigation }) {
       );
       return;
     }
-
     setActivePicker(field);
   };
-
-  const getReportJob = () => ({
-    ...job,
-    name: name.trim() || 'Untitled job',
-    customerName: customerName.trim(),
-    customerPhone: customerPhone.trim(),
-    customerEmail: customerEmail.trim(),
-    customerNotes,
-    address: address.trim(),
-    notes,
-    status,
-    photos,
-    startDate: startDate ? startDate.toISOString() : null,
-    endDate: endDate ? endDate.toISOString() : null,
-  });
 
   const shareCurrentJobReport = async () => {
     setReportLoading(true);
     setReportError('');
     try {
-      await shareJobReport(getReportJob());
+      await shareJobReport({
+        ...job,
+        name: name.trim() || 'Untitled job',
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        customerEmail: customerEmail.trim(),
+        address: address.trim(),
+        notes,
+        status: statusValue,
+        photos,
+        startDate: startDate ? startDate.toISOString() : null,
+        endDate: endDate ? endDate.toISOString() : null,
+      });
     } catch (err) {
       const message = 'Job report could not be generated or shared on this device.';
       setReportError(message);
-      Alert.alert('Report Error', message);
+      Alert.alert('Report error', message);
     } finally {
       setReportLoading(false);
     }
   };
 
+  const reminderTone =
+    reminderState.key === 'overdue'
+      ? 'warning'
+      : reminderState.key === 'scheduled'
+        ? 'success'
+        : 'default';
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      keyboardShouldPersistTaps="handled"
-    >
+    <AppShell scroll testID="job-detail-screen">
       <ScreenHeader
         eyebrow="Job record"
         title={name || 'Untitled job'}
         subtitle={address || 'No address recorded'}
-        right={<View style={[styles.headerStatusMark, { backgroundColor: statusMeta.color }]} />}
+        right={<StatusChip status={statusValue} size="sm" />}
       />
 
-      <LocalStorageNotice>
-        Photos, reminders, notes, and reports for this job stay on this device unless you share or export them.
-      </LocalStorageNotice>
+      <View style={styles.statRow}>
+        <StatTile
+          label="Photos"
+          value={String(photos.length)}
+          icon="image"
+          style={styles.statTile}
+        />
+        <StatTile
+          label="Reminder"
+          value={reminderState.key === 'overdue' ? 'Overdue' : reminderState.key === 'scheduled' ? 'On' : 'Off'}
+          icon={reminderState.key === 'overdue' ? 'bell' : 'bellOff'}
+          tone={reminderTone}
+          style={styles.statTile}
+        />
+        <StatTile
+          label="Logged"
+          value={isCompleted ? totalLoggedTime : '—'}
+          icon="clock"
+          tone={isCompleted ? 'ink' : 'default'}
+          style={styles.statTile}
+        />
+      </View>
 
-      <SectionCard
-        eyebrow="Snapshot"
-        title="At a glance"
-        subtitle="The essentials before you edit the full record."
+      <LocalStorageNotice
+        title="On this device"
+        body="Photos, reminders, notes, and reports for this job stay on this device unless you share or export them."
+      />
+
+      <Section
+        eyebrow="Status"
+        title="Workflow"
+        subtitle="Keep the job state obvious at a glance."
       >
-        <View style={styles.snapshotGrid}>
-          <View style={styles.snapshotTile}>
-            <Text style={styles.snapshotLabel}>Workflow</Text>
-            <Text style={styles.snapshotValue}>Current: {statusMeta.label}</Text>
-          </View>
-          <View style={styles.snapshotTile}>
-            <Text style={styles.snapshotLabel}>Photo count</Text>
-            <Text style={styles.snapshotValue}>
-              {photos.length === 1 ? '1 saved' : `${photos.length} saved`}
-            </Text>
-          </View>
-          <View style={[
-            styles.snapshotTile,
-            reminderState.key === 'overdue' && styles.snapshotTileWarning,
-          ]}>
-            <Text style={[
-              styles.snapshotLabel,
-              reminderState.key === 'overdue' && styles.snapshotLabelWarning,
-            ]}>
-              Reminder
-            </Text>
-            <Text style={[
-              styles.snapshotValue,
-              reminderState.key === 'overdue' && styles.snapshotValueWarning,
-            ]}>
-              {reminderState.key === 'overdue'
-                ? 'Needs follow-up'
-                : reminderState.key === 'scheduled'
-                  ? 'Local alert set'
-                  : 'No local alert'}
-            </Text>
-          </View>
-          <View style={styles.snapshotTile}>
-            <Text style={styles.snapshotLabel}>Logged</Text>
-            <Text style={styles.snapshotValue}>{totalLoggedTime}</Text>
-          </View>
+        <View style={styles.statusRow}>
+          {STATUS_ORDER.map((opt) => (
+            <ChipButton
+              key={opt.key}
+              title={opt.label}
+              active={statusValue === opt.key}
+              onPress={() => setStatusValue(opt.key)}
+              icon={
+                opt.key === 'pending'
+                  ? 'list'
+                  : opt.key === 'in_progress'
+                    ? 'play'
+                    : 'check'
+              }
+            />
+          ))}
         </View>
-      </SectionCard>
+      </Section>
 
-      <SectionCard
-        eyebrow="Summary"
-        title="Job Details"
-        subtitle="A clear work record for the customer, location, notes, and follow-up actions."
+      <Section
+        eyebrow="Work"
+        title="Job details"
+        subtitle="Edit anything. Changes save with the button at the bottom."
       >
         <FormInput
-          label="Job Name"
+          label="Job name"
           value={name}
           onChangeText={setName}
           placeholder="Job name"
         />
-
-        <FormInput
-          label="Customer Name"
-          value={customerName}
-          onChangeText={setCustomerName}
-          placeholder="Customer name"
-        />
-
-        <FormInput
-          label="Customer Phone"
-          value={customerPhone}
-          onChangeText={setCustomerPhone}
-          placeholder="Customer phone"
-          keyboardType="phone-pad"
-        />
-
-        {customerPhone.trim() ? (
-          <View style={styles.inlineActions}>
-            <SecondaryButton title="Call Customer" onPress={callCustomer} style={styles.inlineActionBtn} />
-            <SecondaryButton title="Message" onPress={messageCustomer} style={styles.inlineActionBtn} />
-          </View>
-        ) : null}
-
-        <FormInput
-          label="Customer Email"
-          value={customerEmail}
-          onChangeText={setCustomerEmail}
-          placeholder="Customer email"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-
-        {customerEmail.trim() ? (
-          <SecondaryButton title="Email Customer" onPress={emailCustomer} style={styles.actionBtn} />
-        ) : null}
-
-        <FormInput
-          label="Customer Notes"
-          value={customerNotes}
-          onChangeText={setCustomerNotes}
-          placeholder="Customer notes..."
-          multiline
-          numberOfLines={3}
-        />
-
         <FormInput
           label="Address"
           value={address}
           onChangeText={setAddress}
           placeholder="Job address"
+          leftIcon="location"
         />
-
         <FormInput
-          label="Job Notes"
+          label="Job notes"
           value={notes}
           onChangeText={setNotes}
           placeholder="Notes..."
           multiline
-          numberOfLines={4}
         />
-      </SectionCard>
+      </Section>
 
-      <SectionCard
-        eyebrow="Workflow"
-        title="Status"
-        subtitle="Keep the job state obvious at a glance."
+      <Section
+        eyebrow="Customer"
+        title="Contact"
+        subtitle="Tap a phone or email to call, message, or email."
       >
-        <View style={styles.statusRow}>
-          {STATUS_OPTIONS.map((opt) => {
-            const active = status === opt.key;
-            return (
-              <ChipButton
-                key={opt.key}
-                title={opt.label}
-                active={active}
-                onPress={() => setStatus(opt.key)}
-                style={styles.statusBtn}
-              />
-            );
-          })}
-        </View>
-      </SectionCard>
+        <FormInput
+          label="Customer name"
+          value={customerName}
+          onChangeText={setCustomerName}
+          placeholder="Customer name"
+          leftIcon="info"
+        />
+        <FormInput
+          label="Phone"
+          value={customerPhone}
+          onChangeText={setCustomerPhone}
+          placeholder="Customer phone"
+          keyboardType="phone-pad"
+          leftIcon="phone"
+          rightAdornment={
+            customerPhone.trim() ? (
+              <View style={styles.adornmentRow}>
+                <IconButton name="call" onPress={callCustomer} tone="accent" size={36} />
+                <IconButton name="message" onPress={messageCustomer} tone="accent" size={36} />
+              </View>
+            ) : null
+          }
+        />
+        <FormInput
+          label="Email"
+          value={customerEmail}
+          onChangeText={setCustomerEmail}
+          placeholder="Customer email"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          leftIcon="email"
+          rightAdornment={
+            customerEmail.trim() ? (
+              <IconButton name="mail" onPress={emailCustomer} tone="accent" size={36} />
+            ) : null
+          }
+        />
+      </Section>
 
-      <SectionCard
+      <Section
         eyebrow="Time"
-        title="Time Logged"
-        subtitle="Completed jobs keep their end time so reports can show the total."
+        title="Time logged"
+        subtitle="Mark a start and end so reports can show total time on the job."
       >
-
-        <InfoRow
-          label="Job Start"
-          value={formatDateLabel(startDate)}
-          action="Edit"
+        <DateTimePickerRow
+          label="Job start"
+          value={startDate ? startDate.toLocaleString() : null}
           onPress={() => openDatePicker('startDate')}
         />
-
-        <InfoRow
-          label="Job End"
-          value={formatDateLabel(endDate)}
-          action="Edit"
+        <DateTimePickerRow
+          label="Job end"
+          value={endDate ? endDate.toLocaleString() : null}
           onPress={() => openDatePicker('endDate')}
         />
-
-        {endDate && (
+        {endDate ? (
           <SecondaryButton
-            title="Clear End Time"
+            title="Clear end time"
             onPress={() => setEndDate(null)}
-            style={styles.compactBtn}
+            icon="close"
+            size="sm"
+            style={styles.smallBtn}
           />
-        )}
-
-        <View style={styles.totalTimeBox}>
-          <Text style={styles.totalTimeLabel}>Total Logged</Text>
-          <Text style={styles.totalTimeValue}>{totalLoggedTime}</Text>
+        ) : null}
+        <View style={[styles.totalTimeBox, { backgroundColor: colors.ink, borderColor: colors.ink }]}>
+          <Text style={[styles.totalTimeLabel, { color: colors.subtle }]}>Total logged</Text>
+          <Text style={[styles.totalTimeValue, { color: colors.onInk }]}>{totalLoggedTime}</Text>
         </View>
-      </SectionCard>
+      </Section>
 
-      {activePicker && DateTimePicker && (
+      {activePicker && DateTimePicker ? (
         <DateTimePicker
           value={pickerValue}
           mode="datetime"
@@ -627,557 +595,314 @@ export default function JobDetail({ route, navigation }) {
           onChange={onPickerChange}
           minimumDate={pickerMinimumDate}
         />
-      )}
+      ) : null}
 
-      <SectionCard
+      <Section
         eyebrow="Camera"
         title="Photos"
-        subtitle={photos.length ? `${photos.length} saved in app storage.` : 'Camera-first attachments, stored locally.'}
+        subtitle={
+          photos.length
+            ? `${photos.length} saved in local app storage.`
+            : 'Camera-first attachments, stored locally on this device.'
+        }
       >
-        <SecondaryButton title="Add Photo" onPress={addPhoto} style={styles.actionBtn} />
-
+        <SecondaryButton
+          title="Take photo"
+          icon="camera"
+          onPress={addPhoto}
+          fullWidth
+        />
         {photos.length > 0 ? (
-          <FlatList
-            data={photos}
-            keyExtractor={(item, index) => `${item}-${index}`}
-            numColumns={3}
-            scrollEnabled={false}
-            style={styles.photoGrid}
-            renderItem={({ item, index }) => (
-              <View style={styles.photoTile}>
-                <Image source={{ uri: item }} style={styles.photo} />
-                <Pressable
-                  style={styles.photoDeleteBtn}
-                  onPress={() => deletePhoto(item, index)}
-                  accessibilityLabel="Delete photo"
-                >
-                  <Text style={styles.photoDeleteText}>x</Text>
-                </Pressable>
-              </View>
-            )}
+          <PhotoGrid
+            photos={photos}
+            size={PHOTO_SIZE}
+            onAdd={addPhoto}
+            onDelete={deletePhoto}
+            onPreview={(uri) => setPreviewPhoto(uri)}
           />
         ) : (
-          <View style={styles.photoEmptyPanel}>
-            <View style={styles.photoEmptyIcon}>
-              <Text style={styles.photoEmptyIconText}>+</Text>
+          <View
+            style={[
+              styles.photoEmpty,
+              { backgroundColor: colors.surfaceInset, borderColor: colors.borderSoft },
+            ]}
+          >
+            <View
+              style={[
+                styles.photoEmptyIcon,
+                { backgroundColor: colors.accentSoft, borderColor: colors.accentBorder },
+              ]}
+            >
+              <Icon name="camera" size={22} color={colors.accentInk} />
             </View>
-            <Text style={styles.photoEmptyTitle}>No photos attached</Text>
-            <Text style={styles.photoEmptyText}>
-              Capture job progress, parts, damage, or completed work. Photos are copied into local app storage.
+            <Text style={[styles.photoEmptyTitle, { color: colors.ink }]}>
+              No photos attached
+            </Text>
+            <Text style={[styles.photoEmptyBody, { color: colors.muted }]}>
+              Capture job progress, parts, damage, or completed work. Photos are copied into local app storage on this device.
             </Text>
           </View>
         )}
-      </SectionCard>
+      </Section>
 
-      <SectionCard
+      <Section
         eyebrow="Follow-up"
         title="Reminder"
         subtitle="Local notifications help you keep moving without any cloud account."
       >
-        <View style={[
-          styles.reminderStateBox,
-          reminderState.key === 'overdue' && styles.reminderStateBoxOverdue,
-          reminderState.key === 'scheduled' && styles.reminderStateBoxScheduled,
-        ]}>
-          <Text style={[
-            styles.reminderStateTitle,
-            reminderState.key === 'overdue' && styles.reminderStateTitleOverdue,
-          ]}>
-            {reminderState.detail}
-          </Text>
-          <Text style={styles.reminderStateText}>{reminderState.label}</Text>
-        </View>
-        <SecondaryButton
-          title={reminder ? 'Change Reminder' : 'Set Reminder'}
-          onPress={() => openDatePicker('reminder')}
-          style={styles.actionBtn}
-        />
-
-        {reminder && (
-          <SecondaryButton
-            title="Clear Reminder"
-            onPress={() => setReminder(null)}
-            style={styles.compactBtn}
+        <View
+          style={[
+            styles.reminderState,
+            {
+              backgroundColor:
+                reminderState.key === 'overdue'
+                  ? colors.dangerSoft
+                  : reminderState.key === 'scheduled'
+                    ? colors.accentSoft
+                    : colors.surfaceInset,
+              borderColor:
+                reminderState.key === 'overdue'
+                  ? colors.dangerBorder
+                  : reminderState.key === 'scheduled'
+                    ? colors.accentBorder
+                    : colors.borderSoft,
+            },
+          ]}
+        >
+          <Icon
+            name={reminderState.key === 'overdue' ? 'warning' : 'bell'}
+            size={18}
+            color={
+              reminderState.key === 'overdue'
+                ? colors.danger
+                : reminderState.key === 'scheduled'
+                  ? colors.accentInk
+                  : colors.muted
+            }
           />
-        )}
-      </SectionCard>
+          <View style={styles.reminderStateCopy}>
+            <Text
+              style={[
+                styles.reminderStateTitle,
+                {
+                  color:
+                    reminderState.key === 'overdue'
+                      ? colors.danger
+                      : reminderState.key === 'scheduled'
+                        ? colors.accentInk
+                        : colors.ink,
+                },
+              ]}
+            >
+              {reminderState.detail}
+            </Text>
+            <Text style={[styles.reminderStateBody, { color: colors.muted }]}>
+              {reminderState.label}
+            </Text>
+          </View>
+        </View>
+        <DateTimePickerRow
+          label={reminder ? 'Change reminder' : 'Set reminder'}
+          value={reminder ? reminder.toLocaleString() : null}
+          onPress={() => openDatePicker('reminder')}
+        />
+        {reminder ? (
+          <SecondaryButton
+            title="Clear reminder"
+            icon="close"
+            onPress={() => setReminder(null)}
+            size="sm"
+            style={styles.smallBtn}
+          />
+        ) : null}
+      </Section>
 
-      <SectionCard
+      <Section
         eyebrow="Report"
         title="Share a job report"
         subtitle="Build a local PDF summary with customer details, notes, time, and photos."
       >
-        <View style={styles.reportPreview}>
-          <View style={styles.reportPreviewHeader}>
-            <Text style={styles.reportPreviewTitle}>Report includes</Text>
-            <Text style={styles.reportPreviewBadge}>PDF</Text>
-          </View>
-          <View style={styles.reportPreviewGrid}>
-            <Text style={styles.reportPreviewItem}>Job details</Text>
-            <Text style={styles.reportPreviewItem}>Customer info</Text>
-            <Text style={styles.reportPreviewItem}>Time logged</Text>
-            <Text style={styles.reportPreviewItem}>
-              {photos.length === 1 ? '1 photo' : `${photos.length} photos`}
-            </Text>
-          </View>
-        </View>
-        <SecondaryButton
-          title={reportLoading ? 'Building Report...' : 'Share Job Report'}
-          onPress={shareCurrentJobReport}
-          disabled={reportLoading || saving}
-          style={styles.actionBtn}
+        <ReportActionCard
+          onShare={shareCurrentJobReport}
+          loading={reportLoading}
         />
-      </SectionCard>
-      {reportError ? <Text style={styles.reportError}>{reportError}</Text> : null}
+        {reportError ? (
+          <Text style={[styles.reportError, { color: colors.danger }]}>{reportError}</Text>
+        ) : null}
+      </Section>
 
-      <PrimaryButton
-        title={saving ? 'Saving...' : 'Save'}
-        onPress={save}
-        disabled={saving}
-        style={styles.saveBtn}
-      />
-    </ScrollView>
+      <View style={styles.actionBar}>
+        <PrimaryButton
+          title={saving ? 'Saving…' : 'Save job'}
+          icon="check"
+          onPress={save}
+          loading={saving}
+          disabled={saving}
+          fullWidth
+        />
+        <SecondaryButton title="Cancel" onPress={() => navigation.goBack()} fullWidth />
+      </View>
+
+      <Modal
+        visible={Boolean(previewPhoto)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewPhoto(null)}
+      >
+        <Pressable
+          style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}
+          onPress={() => setPreviewPhoto(null)}
+        >
+          <View style={styles.modalImageWrap}>
+            {previewPhoto ? (
+              <Image source={{ uri: previewPhoto }} style={styles.modalImage} resizeMode="contain" />
+            ) : null}
+            <Pressable
+              onPress={() => setPreviewPhoto(null)}
+              style={[styles.modalClose, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              accessibilityLabel="Close photo"
+            >
+              <Icon name="close" size={18} color={colors.ink} />
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+    </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  contentContainer: {
-    padding: spacing.screen,
-    paddingBottom: 44,
-  },
-  headerStatusMark: {
-    width: 38,
-    height: 38,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-  },
-  snapshotGrid: {
+  statRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: 10,
+    marginBottom: 14,
   },
-  snapshotTile: {
+  statTile: {
     flexGrow: 1,
-    flexBasis: 132,
-    minHeight: 74,
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  snapshotTileWarning: {
-    backgroundColor: colors.dangerSoft,
-    borderColor: colors.danger,
-  },
-  snapshotLabel: {
-    ...typography.label,
-    color: colors.subtle,
-    marginBottom: spacing.xs,
-  },
-  snapshotLabelWarning: {
-    color: colors.danger,
-  },
-  snapshotValue: {
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: '900',
-    lineHeight: 20,
-  },
-  snapshotValueWarning: {
-    color: colors.danger,
-  },
-  pageHeader: {
-    paddingBottom: spacing.xl,
-  },
-  pageEyebrow: {
-    ...typography.eyebrow,
-    color: colors.subtle,
-    marginBottom: spacing.sm,
-  },
-  pageTitle: {
-    ...typography.screenTitle,
-    color: colors.ink,
-  },
-  pageSubtitle: {
-    ...typography.body,
-    color: colors.muted,
-    marginTop: spacing.xs,
-  },
-  sectionCard: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadows.card,
-  },
-  sectionTitle: {
-    ...typography.sectionTitle,
-    color: colors.ink,
-    marginBottom: spacing.md,
-  },
-  label: {
-    ...typography.label,
-    color: colors.muted,
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 13,
-    fontSize: 16,
-    lineHeight: 21,
-    minHeight: 52,
-    color: colors.text,
-  },
-  notesInput: {
-    minHeight: 112,
-    textAlignVertical: 'top',
+    flexBasis: 0,
   },
   statusRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: 8,
   },
-  statusBtn: {
-    flexGrow: 1,
-    flexBasis: 120,
-    minHeight: 46,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.sm,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceAlt,
-  },
-  statusBtnActive: {
-    backgroundColor: colors.ink,
-    borderColor: colors.ink,
-  },
-  statusBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: colors.muted,
-    textAlign: 'center',
-  },
-  statusBtnTextActive: {
-    color: colors.white,
-  },
-  infoRowBtn: {
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    minHeight: 62,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
-    gap: spacing.md,
-    backgroundColor: colors.surfaceAlt,
-  },
-  infoRowText: {
-    flex: 1,
-  },
-  infoRowLabel: {
-    ...typography.label,
-    color: colors.subtle,
-    marginBottom: spacing.xs,
-  },
-  infoRowValue: {
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: '700',
-    flexShrink: 1,
-  },
-  infoRowAction: {
-    color: colors.accentInk,
-    fontWeight: '900',
-    fontSize: 13,
-    flexShrink: 0,
-  },
-  clearBtn: {
-    marginTop: spacing.sm,
+  smallBtn: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  clearBtnText: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  compactBtn: {
-    marginTop: spacing.sm,
-    alignSelf: 'flex-start',
-    minHeight: 44,
-    paddingVertical: spacing.sm,
+    marginTop: 8,
   },
   totalTimeBox: {
-    marginTop: spacing.md,
-    backgroundColor: colors.ink,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    marginTop: 12,
   },
   totalTimeLabel: {
-    ...typography.label,
-    color: colors.subtle,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   totalTimeValue: {
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.white,
-    fontWeight: '900',
-    marginTop: spacing.xs,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    marginTop: 4,
   },
-  reminderStateBox: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  reminderStateBoxScheduled: {
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accentBorder,
-  },
-  reminderStateBoxOverdue: {
-    backgroundColor: colors.dangerSoft,
-    borderColor: colors.danger,
-  },
-  reminderStateTitle: {
-    color: colors.subtle,
-    ...typography.label,
-    marginBottom: 3,
-  },
-  reminderStateTitleOverdue: {
-    color: colors.danger,
-  },
-  reminderStateText: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  photoGrid: {
-    marginTop: spacing.md,
-  },
-  photo: {
-    width: PHOTO_SIZE,
-    height: PHOTO_SIZE,
-    borderRadius: radii.sm,
-  },
-  photoTile: {
-    width: PHOTO_SIZE,
-    height: PHOTO_SIZE,
-    margin: 2,
-  },
-  photoEmptyPanel: {
+  photoEmpty: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.md,
+    padding: 24,
+    borderRadius: 16,
     borderWidth: 1,
-    marginTop: spacing.md,
-    minHeight: 168,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+    borderStyle: 'dashed',
+    marginTop: 12,
   },
   photoEmptyIcon: {
-    alignItems: 'center',
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accentBorder,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    height: 48,
-    justifyContent: 'center',
-    marginBottom: spacing.md,
     width: 48,
-  },
-  photoEmptyIconText: {
-    color: colors.accentInk,
-    fontSize: 24,
-    fontWeight: '900',
-    lineHeight: 28,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   photoEmptyTitle: {
-    ...typography.sectionTitle,
-    color: colors.ink,
-    textAlign: 'center',
-  },
-  photoEmptyText: {
-    ...typography.small,
-    color: colors.muted,
-    marginTop: spacing.xs,
-    textAlign: 'center',
-  },
-  photoDeleteBtn: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.overlay,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoDeleteText: {
-    color: colors.white,
-    fontSize: 17,
-    lineHeight: 18,
-    fontWeight: '900',
-  },
-  actionBtn: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.md,
-    paddingVertical: 13,
-    paddingHorizontal: spacing.lg,
-    minHeight: buttons.minHeight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.xs,
-  },
-  actionBtnText: {
-    color: colors.text,
     fontSize: 15,
-    fontWeight: '900',
-    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '700',
   },
-  inlineActions: {
+  photoEmptyBody: {
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    marginTop: 4,
+    maxWidth: 280,
+  },
+  reminderState: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  inlineActionBtn: {
-    flexGrow: 1,
-    flexBasis: 140,
-    minHeight: buttons.minHeight,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pdfBtn: {
-    backgroundColor: colors.surfaceRaised,
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: buttons.radius,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.lg,
-    minHeight: buttons.minHeight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.sm,
   },
-  pdfBtnText: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '900',
-    textAlign: 'center',
+  reminderStateCopy: {
+    flex: 1,
   },
-  disabledBtn: {
-    opacity: 0.65,
+  reminderStateTitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  reminderStateBody: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
   },
   reportError: {
-    color: colors.danger,
-    fontSize: 13,
-    marginTop: spacing.sm,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    marginTop: 8,
     textAlign: 'center',
   },
-  reportPreview: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    padding: spacing.lg,
+  actionBar: {
+    marginTop: 8,
+    marginBottom: 20,
+    gap: 10,
   },
-  reportPreviewHeader: {
-    alignItems: 'center',
+  adornmentRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    gap: 6,
   },
-  reportPreviewTitle: {
-    ...typography.sectionTitle,
-    color: colors.ink,
-  },
-  reportPreviewBadge: {
-    backgroundColor: colors.ink,
-    borderRadius: radii.sm,
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-  },
-  reportPreviewGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  reportPreviewItem: {
-    backgroundColor: colors.surfaceRaised,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    color: colors.text,
-    flexGrow: 1,
-    flexBasis: 130,
-    fontSize: 13,
-    fontWeight: '800',
-    lineHeight: 18,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  saveBtn: {
-    backgroundColor: colors.accent,
-    borderRadius: buttons.radius,
-    borderWidth: 1,
-    borderColor: colors.accentInk,
-    paddingVertical: 15,
-    paddingHorizontal: spacing.lg,
-    minHeight: buttons.minHeight,
+  modalBackdrop: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.md,
-    ...shadows.lift,
   },
-  saveBtnText: {
-    color: colors.white,
-    fontSize: 15,
-    fontWeight: '900',
-    textAlign: 'center',
+  modalImageWrap: {
+    width: '92%',
+    height: '78%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
+  },
+  modalClose: {
+    position: 'absolute',
+    top: -42,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

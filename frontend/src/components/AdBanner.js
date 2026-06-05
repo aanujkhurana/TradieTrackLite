@@ -3,7 +3,8 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { getAdMobBannerUnitId } from '../monetization/config';
 import { useMonetization } from '../monetization/MonetizationContext';
 import { hasNativeModule } from '../runtime';
-import { colors, radii, spacing } from '../theme';
+import { useTheme } from '../theme';
+import { AdContainer } from './ui';
 
 function getGoogleMobileAdsModule() {
   if (!hasNativeModule(['RNGoogleMobileAdsModule'])) {
@@ -17,8 +18,9 @@ function getGoogleMobileAdsModule() {
   }
 }
 
-export default function AdBanner({ placement = 'default' }) {
+export default function AdBanner({ placement = 'default', style }) {
   const { isAdFree, isLoading } = useMonetization();
+  const { colors } = useTheme();
   const googleMobileAds = getGoogleMobileAdsModule();
   const unitId = getAdMobBannerUnitId(Platform.OS, __DEV__, googleMobileAds?.TestIds || {});
 
@@ -29,26 +31,21 @@ export default function AdBanner({ placement = 'default' }) {
   const { BannerAd, BannerAdSize } = googleMobileAds;
 
   return (
-    <View style={styles.container} testID={`ad-banner-${placement}`}>
-      <BannerAd
-        unitId={unitId}
-        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-        requestOptions={{ requestNonPersonalizedAdsOnly: true }}
-      />
-    </View>
+    <AdContainer style={style}>
+      <View style={styles.body}>
+        <BannerAd
+          unitId={unitId}
+          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+          requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+        />
+      </View>
+    </AdContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  body: {
+    width: '100%',
     alignItems: 'center',
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    marginBottom: spacing.md,
-    minHeight: 50,
-    paddingVertical: spacing.sm,
-    justifyContent: 'center',
   },
 });

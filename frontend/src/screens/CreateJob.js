@@ -2,26 +2,26 @@ import React, { useState } from 'react';
 import {
   Alert,
   StyleSheet,
-  ScrollView,
-  Text,
   View,
 } from 'react-native';
 import { createJob } from '../data/jobs';
 import {
+  AppShell,
   FormInput,
   LocalStorageNotice,
   PrimaryButton,
   ScreenHeader,
-  SectionCard,
+  SecondaryButton,
+  Section,
 } from '../components/ui';
-import { colors, spacing } from '../theme';
+import { useTheme } from '../theme';
 
 export default function CreateJob({ navigation }) {
+  const { colors } = useTheme();
   const [name, setName] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [customerNotes, setCustomerNotes] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [nameError, setNameError] = useState('');
@@ -30,16 +30,15 @@ export default function CreateJob({ navigation }) {
 
   const handleSubmit = async () => {
     if (saving) return;
-
     let valid = true;
     if (!name.trim()) {
-      setNameError('Job name is required');
+      setNameError('A job name helps you find this record later.');
       valid = false;
     } else {
       setNameError('');
     }
     if (!address.trim()) {
-      setAddressError('Address is required');
+      setAddressError('An address keeps the job tied to a location.');
       valid = false;
     } else {
       setAddressError('');
@@ -53,17 +52,16 @@ export default function CreateJob({ navigation }) {
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         customerEmail: customerEmail.trim(),
-        customerNotes,
         address: address.trim(),
         notes,
       });
       navigation.goBack();
     } catch (err) {
       if (err.code === 'VALIDATION_ERROR') {
-        Alert.alert('Validation Error', err.message);
+        Alert.alert('Validation error', err.message);
       } else {
         Alert.alert(
-          'Local Storage Error',
+          'Local storage error',
           'Job could not be saved on this device. No internet is required, so try again from the local job form.'
         );
       }
@@ -73,194 +71,107 @@ export default function CreateJob({ navigation }) {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      keyboardShouldPersistTaps="handled"
-    >
+    <AppShell scroll testID="create-job-screen">
       <ScreenHeader
-        eyebrow="Job intake"
-        title="New Job"
-        subtitle="Capture the essentials quickly while on-site."
+        eyebrow="New job"
+        title="Quick docket"
+        subtitle="Just the essentials. Add photos, reminders, and time tracking from the job record."
       />
 
-      <LocalStorageNotice>
-        No account required. This job is saved on this device unless you export it.
-      </LocalStorageNotice>
+      <LocalStorageNotice
+        title="On this device"
+        body="This job is saved locally on this phone. No account, no cloud, no sync."
+      />
 
-      <View style={styles.docketPreview}>
-        <View style={styles.docketHeader}>
-          <Text style={styles.docketEyebrow}>Quick docket</Text>
-          <Text style={styles.docketBadge}>Local</Text>
-        </View>
-        <Text style={styles.docketTitle}>Start with name and address</Text>
-        <Text style={styles.docketText}>
-          Customer details, notes, photos, reminders, and reports can be added later from the job record.
-        </Text>
-        <View style={styles.docketChecks}>
-          <Text style={styles.docketCheck}>Required fields stay minimal</Text>
-          <Text style={styles.docketCheck}>Saved on this device</Text>
-          <Text style={styles.docketCheck}>Ready for local reports</Text>
-        </View>
-      </View>
-
-      <SectionCard
+      <Section
         eyebrow="Work"
-        title="Job docket"
-        subtitle="Keep the required fields short, then add detail only where it helps."
+        title="What needs doing?"
+        subtitle="Keep this short and specific. You can edit anything later."
       >
         <FormInput
-          label="Job Name *"
+          label="Job name"
           value={name}
           onChangeText={setName}
           placeholder="e.g. Fix kitchen tap"
-          returnKeyType="next"
           error={nameError}
+          returnKeyType="next"
+          autoCapitalize="sentences"
         />
-
         <FormInput
-          label="Address *"
+          label="Address"
           value={address}
           onChangeText={setAddress}
           placeholder="e.g. 12 Main St, Sydney"
-          returnKeyType="next"
           error={addressError}
+          returnKeyType="next"
+          leftIcon="location"
         />
-
         <FormInput
-          label="Job Notes"
+          label="Job notes"
           value={notes}
           onChangeText={setNotes}
-          placeholder="Optional notes..."
+          placeholder="Anything to remember about the work"
+          helper="Optional. Add the details that help on-site."
           multiline
-          numberOfLines={4}
         />
-      </SectionCard>
+      </Section>
 
-      <SectionCard
+      <Section
         eyebrow="Customer"
-        title="Contact details"
-        subtitle="Separate customer info from the job title so reports stay tidy."
+        title="Who is it for?"
+        subtitle="Keeps customer info separate from the job title. Add later if you do not have it now."
       >
         <FormInput
-          label="Customer Name"
+          label="Customer name"
           value={customerName}
           onChangeText={setCustomerName}
           placeholder="e.g. Sarah Williams"
           returnKeyType="next"
+          leftIcon="info"
         />
-
         <FormInput
-          label="Customer Phone"
+          label="Phone"
           value={customerPhone}
           onChangeText={setCustomerPhone}
-          placeholder="e.g. 0400 123 456"
+          placeholder="0400 000 000"
           keyboardType="phone-pad"
           returnKeyType="next"
+          leftIcon="phone"
         />
-
         <FormInput
-          label="Customer Email"
+          label="Email"
           value={customerEmail}
           onChangeText={setCustomerEmail}
-          placeholder="e.g. sarah@example.com"
+          placeholder="name@example.com"
           keyboardType="email-address"
           autoCapitalize="none"
-          returnKeyType="next"
+          leftIcon="email"
         />
+      </Section>
 
-        <FormInput
-          label="Customer Notes"
-          value={customerNotes}
-          onChangeText={setCustomerNotes}
-          placeholder="Optional customer-specific notes..."
-          multiline
-          numberOfLines={3}
+      <View style={styles.actionBar}>
+        <PrimaryButton
+          title={saving ? 'Saving…' : 'Save job'}
+          icon="check"
+          onPress={handleSubmit}
+          disabled={saving}
+          loading={saving}
+          fullWidth
         />
-      </SectionCard>
-
-      <PrimaryButton
-        title={saving ? 'Saving Job...' : 'Save Job'}
-        onPress={handleSubmit}
-        disabled={saving}
-        style={styles.saveBtn}
-      />
-    </ScrollView>
+        <SecondaryButton
+          title="Cancel"
+          onPress={() => navigation.goBack()}
+          fullWidth
+        />
+      </View>
+    </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  contentContainer: {
-    padding: spacing.screen,
-    paddingBottom: 42,
-  },
-  docketPreview: {
-    backgroundColor: colors.ink,
-    borderColor: colors.graphite,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: spacing.md,
-    padding: spacing.lg,
-  },
-  docketHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  docketEyebrow: {
-    color: colors.subtle,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  docketBadge: {
-    backgroundColor: colors.accent,
-    borderRadius: 6,
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-  },
-  docketTitle: {
-    color: colors.white,
-    fontSize: 20,
-    fontWeight: '900',
-    lineHeight: 26,
-  },
-  docketText: {
-    color: colors.border,
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: spacing.xs,
-  },
-  docketChecks: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  docketCheck: {
-    backgroundColor: colors.graphite,
-    borderColor: colors.borderStrong,
-    borderRadius: 6,
-    borderWidth: 1,
-    color: colors.surface,
-    flexGrow: 1,
-    flexBasis: 132,
-    fontSize: 12,
-    fontWeight: '800',
-    lineHeight: 17,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  saveBtn: {
-    marginTop: spacing.sm,
+  actionBar: {
+    marginTop: 8,
+    marginBottom: 16,
+    gap: 10,
   },
 });

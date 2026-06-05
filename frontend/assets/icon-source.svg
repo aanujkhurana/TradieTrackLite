@@ -1,10 +1,15 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1024" height="1024" fill="#151411"/>
-  <rect x="144" y="144" width="736" height="736" rx="132" fill="#27241F"/>
-  <rect x="250" y="242" width="474" height="598" rx="58" fill="#FFFCF6"/>
-  <path d="M338 242H636C668 242 694 268 694 300V382H276V304C276 268 304 242 338 242Z" fill="#E9E4D9"/>
-  <rect x="368" y="290" width="236" height="58" rx="22" fill="#27241F"/>
-  <rect x="338" y="472" width="386" height="62" rx="25" fill="#B97912"/>
-  <path d="M386 650L496 742L696 498" stroke="#2F6C5F" stroke-width="68" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="734" cy="274" r="26" fill="#2F6C5F"/>
+  <!-- Background: deep warm charcoal (premium productivity app tone) -->
+  <rect width="1024" height="1024" fill="#1A1814"/>
+  <!-- Subtle inner edge for tactile depth -->
+  <rect x="0.5" y="0.5" width="1023" height="1023" rx="0" stroke="#272320" stroke-width="1"/>
+
+  <!-- T monogram: clean geometric construction -->
+  <!-- Horizontal bar of the T -->
+  <rect x="304" y="296" width="416" height="76" rx="38" fill="#F4EFE4"/>
+  <!-- Vertical stem of the T -->
+  <rect x="474" y="296" width="76" height="436" rx="38" fill="#F4EFE4"/>
+
+  <!-- Status accent dot, bottom right, restrained and brand-recognizable -->
+  <circle cx="772" cy="772" r="44" fill="#7DBDA9"/>
 </svg>

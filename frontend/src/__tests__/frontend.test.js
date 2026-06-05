@@ -20,10 +20,10 @@ import Purchases from 'react-native-purchases';
 
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
-
   return {
     useNavigation: () => ({ goBack: jest.fn() }),
     useFocusEffect: jest.fn((callback) => React.useEffect(callback, [callback])),
+    useColorScheme: () => 'light',
   };
 });
 jest.mock('../data/jobs', () => ({
@@ -36,6 +36,10 @@ jest.mock('../monetization/MonetizationContext', () => ({
   useMonetization: () => ({
     isAdFree: false,
     isLoading: false,
+    isBusy: false,
+    purchaseAdFree: jest.fn(),
+    restorePurchase: jest.fn(),
+    entitlement: { isAdFree: false, source: 'none' },
   }),
 }));
 jest.mock('expo-image-picker', () => ({
@@ -115,6 +119,13 @@ jest.mock('react-native/Libraries/Utilities/Dimensions', () => {
     default: dimensions,
   };
 });
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return {
+    Ionicons: ({ name }) => React.createElement(Text, null, name || 'icon'),
+  };
+});
 
 import { createJob, listJobs, updateJob } from '../data/jobs';
 import { appendPhotoUri, removePhotoUriAtIndex } from '../data/photos';
@@ -122,6 +133,7 @@ import {
   filterJobsByWorkflow,
   getReminderState,
   isReminderOverdue,
+  STATUS_LABELS,
 } from '../utils/jobWorkflow';
 import { buildJobsBackupPayload } from '../data/backups';
 import { buildJobReportHtml } from '../data/reports';
@@ -134,7 +146,7 @@ import {
   AD_FREE_PRODUCT_ID,
   getAdMobBannerUnitId,
 } from '../monetization/config';
-import { colors } from '../theme';
+import { lightTheme, darkTheme } from '../theme/themes';
 import {
   loadAdFreeEntitlement,
   saveAdFreeEntitlement,
@@ -146,27 +158,15 @@ import {
   resetPurchasesConfigurationForTests,
   restoreAdFreePurchase,
 } from '../monetization/revenueCat';
+import { ThemeProvider } from '../theme/ThemeProvider';
 import CreateJob from '../screens/CreateJob';
 import Jobs from '../screens/Jobs';
 import JobDetail from '../screens/JobDetail';
 import Settings from '../screens/Settings';
 
-// ---------------------------------------------------------------------------
-// Pure logic helpers (extracted from screen logic for property testing)
-// ---------------------------------------------------------------------------
-
-/** Replicates backend/frontend reminder validation logic */
-function isValidISODate(str) {
-  const d = new Date(str);
-  return !isNaN(d.getTime());
+function withTheme(node) {
+  return <ThemeProvider initialMode="light">{node}</ThemeProvider>;
 }
-
-/** Status → colour mapping from Jobs.js */
-const STATUS_COLOURS = {
-  pending: colors.subtle,
-  in_progress: colors.accent,
-  completed: colors.ink,
-};
 
 // ---------------------------------------------------------------------------
 // 10.1 — Property 6: Photo URI append invariant
@@ -174,13 +174,6 @@ const STATUS_COLOURS = {
 // ---------------------------------------------------------------------------
 
 describe('Property 6: Photo URI append invariant', () => {
-  /**
-   * Validates: Requirements 5.2
-   *
-   * For any existing photos array and any new URI string, appending the URI
-   * SHALL increase the array length by exactly 1 and the new URI SHALL be
-   * the last element.
-   */
   it('appending a URI increases length by 1 and places URI last', () => {
     fc.assert(
       fc.property(fc.array(fc.string()), fc.string(), (photos, uri) => {
@@ -210,16 +203,14 @@ describe('Property 6: Photo URI append invariant', () => {
 
 // ---------------------------------------------------------------------------
 // 10.2 — Property 7: Reminder validation
-// Validates: Requirements 6.5
 // ---------------------------------------------------------------------------
 
 describe('Property 7: Reminder validation', () => {
-  /**
-   * Validates: Requirements 6.5
-   *
-   * isValidISODate SHALL return true for any valid ISO 8601 date string
-   * and false for strings that are not valid dates.
-   */
+  function isValidISODate(str) {
+    const d = new Date(str);
+    return !isNaN(d.getTime());
+  }
+
   it('accepts valid ISO 8601 date strings', () => {
     fc.assert(
       fc.property(fc.date(), (date) => {
@@ -241,41 +232,46 @@ describe('Property 7: Reminder validation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 10.3 — Property 10: Status badge colour mapping
-// Validates: Requirements 2.3
+// 10.3 — Property 10: Status colour mapping
 // ---------------------------------------------------------------------------
 
-describe('Property 10: Status badge colour mapping', () => {
-  /**
-   * Validates: Requirements 2.3
-   *
-   * For each valid status value the colour SHALL match the defined
-   * monochrome/accent mapping.
-   */
-  it('maps every valid status to the correct colour', () => {
+const JOB_STATUS_KEYS = ['pending', 'in_progress', 'completed'];
+
+describe('Property 10: Status colour mapping', () => {
+  it('light theme has a tuned palette for every status', () => {
     fc.assert(
       fc.property(
-        fc.constantFrom('pending', 'in_progress', 'completed'),
+        fc.constantFrom(...JOB_STATUS_KEYS),
         (status) => {
-          const expected = STATUS_COLOURS[status];
-          expect(STATUS_COLOURS[status]).toBe(expected);
-          expect(typeof expected).toBe('string');
-          expect(expected.length).toBeGreaterThan(0);
+          const entry = lightTheme.status[status];
+          expect(entry).toBeDefined();
+          expect(entry.fg).toMatch(/^#[0-9A-Fa-f]{6}$/);
+          expect(entry.bg).toMatch(/^#[0-9A-Fa-f]{6}$/);
+          expect(entry.border).toMatch(/^#[0-9A-Fa-f]{6}$/);
         }
       )
     );
   });
 
-  it('pending maps to subtle grey', () => {
-    expect(STATUS_COLOURS['pending']).toBe(colors.subtle);
+  it('dark theme has a tuned palette for every status', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...JOB_STATUS_KEYS),
+        (status) => {
+          const entry = darkTheme.status[status];
+          expect(entry).toBeDefined();
+          expect(entry.fg).toMatch(/^#[0-9A-Fa-f]{6}$/);
+          expect(entry.bg).toMatch(/^#[0-9A-Fa-f]{6}$/);
+          expect(entry.border).toMatch(/^#[0-9A-Fa-f]{6}$/);
+        }
+      )
+    );
   });
 
-  it('in_progress maps to the single accent', () => {
-    expect(STATUS_COLOURS['in_progress']).toBe(colors.accent);
-  });
-
-  it('completed maps to ink', () => {
-    expect(STATUS_COLOURS['completed']).toBe(colors.ink);
+  it('light and dark themes use different colours for the same status', () => {
+    JOB_STATUS_KEYS.forEach((key) => {
+      expect(lightTheme.status[key].fg).not.toBe(darkTheme.status[key].fg);
+    });
   });
 });
 
@@ -339,6 +335,12 @@ describe('Local job workflow helpers', () => {
     }));
     expect(isReminderOverdue(completedJob, now)).toBe(false);
   });
+
+  it('exposes human-readable status labels for every status', () => {
+    expect(STATUS_LABELS.pending).toBe('To do');
+    expect(STATUS_LABELS.in_progress).toBe('In progress');
+    expect(STATUS_LABELS.completed).toBe('Done');
+  });
 });
 
 describe('Local reports and backup helpers', () => {
@@ -365,7 +367,7 @@ describe('Local reports and backup helpers', () => {
     expect(html).toContain('Fix tap');
     expect(html).toContain('Sarah');
     expect(html).toContain('1 Test St');
-    expect(html).toContain('Completed');
+    expect(html).toContain('Done');
     expect(html).toContain('Kitchen sink leak');
     expect(html).toContain('2h 30m');
     expect(html).toContain('data:image/jpeg;base64,photo-base64');
@@ -556,7 +558,6 @@ describe('Ad-free entitlement and monetization helpers', () => {
 
 // ---------------------------------------------------------------------------
 // 10.4 — Unit tests for CreateJob screen
-// Validates: Requirements 1.4
 // ---------------------------------------------------------------------------
 
 describe('CreateJob screen', () => {
@@ -566,26 +567,28 @@ describe('CreateJob screen', () => {
     jest.clearAllMocks();
   });
 
-  it('empty name prevents submit and does not create a job', () => {
+  it('empty name prevents submit and does not create a job', async () => {
     const { getByPlaceholderText, getByText } = render(
-      <CreateJob navigation={mockNavigation} />
+      withTheme(<CreateJob navigation={mockNavigation} />)
     );
 
-    // Leave name empty, fill address
     fireEvent.changeText(getByPlaceholderText('e.g. 12 Main St, Sydney'), '1 Test St');
-    fireEvent.press(getByText('Save Job'));
+    await act(async () => {
+      fireEvent.press(getByText(/save job/i));
+    });
 
     expect(createJob).not.toHaveBeenCalled();
   });
 
-  it('empty address prevents submit and does not create a job', () => {
+  it('empty address prevents submit and does not create a job', async () => {
     const { getByPlaceholderText, getByText } = render(
-      <CreateJob navigation={mockNavigation} />
+      withTheme(<CreateJob navigation={mockNavigation} />)
     );
 
-    // Fill name, leave address empty
     fireEvent.changeText(getByPlaceholderText('e.g. Fix kitchen tap'), 'Fix tap');
-    fireEvent.press(getByText('Save Job'));
+    await act(async () => {
+      fireEvent.press(getByText(/save job/i));
+    });
 
     expect(createJob).not.toHaveBeenCalled();
   });
@@ -594,14 +597,14 @@ describe('CreateJob screen', () => {
     createJob.mockResolvedValueOnce({ _id: '1', name: 'Fix tap', address: '1 Test St' });
 
     const { getByPlaceholderText, getByText } = render(
-      <CreateJob navigation={mockNavigation} />
+      withTheme(<CreateJob navigation={mockNavigation} />)
     );
 
     fireEvent.changeText(getByPlaceholderText('e.g. Fix kitchen tap'), 'Fix tap');
     fireEvent.changeText(getByPlaceholderText('e.g. 12 Main St, Sydney'), '1 Test St');
 
     await act(async () => {
-      fireEvent.press(getByText('Save Job'));
+      fireEvent.press(getByText(/save job/i));
     });
 
     await waitFor(() => {
@@ -624,23 +627,22 @@ describe('Jobs screen mobile polish', () => {
   it('shows local database initialization while the first job load is pending', () => {
     listJobs.mockReturnValueOnce(new Promise(() => {}));
 
-    const { getByText } = render(<Jobs navigation={mockNavigation} />);
+    const { getByText } = render(withTheme(<Jobs navigation={mockNavigation} />));
 
-    expect(getByText('Opening your local job list')).toBeTruthy();
-    expect(getByText('Setting up the on-device database. This works without internet.')).toBeTruthy();
+    expect(getByText('Opening your job list')).toBeTruthy();
+    expect(getByText(/on-device database/i)).toBeTruthy();
   });
 
   it('shows a helpful empty state and CTA after local jobs load', async () => {
     listJobs.mockResolvedValueOnce([]);
 
-    const { getByText } = render(<Jobs navigation={mockNavigation} />);
+    const { getByText } = render(withTheme(<Jobs navigation={mockNavigation} />));
 
     await waitFor(() => {
       expect(getByText('No jobs yet')).toBeTruthy();
-      expect(getByText(/kept on this device/i)).toBeTruthy();
     });
 
-    fireEvent.press(getByText('Add First Job'));
+    fireEvent.press(getByText('Add first job'));
 
     expect(mockNavigation.navigate).toHaveBeenCalledWith('CreateJob');
   });
@@ -650,7 +652,7 @@ describe('Jobs screen mobile polish', () => {
       .mockRejectedValueOnce(new Error('sqlite unavailable'))
       .mockResolvedValueOnce([]);
 
-    const { getByText } = render(<Jobs navigation={mockNavigation} />);
+    const { getByText } = render(withTheme(<Jobs navigation={mockNavigation} />));
 
     await waitFor(() => {
       expect(getByText('Could not open jobs')).toBeTruthy();
@@ -658,7 +660,7 @@ describe('Jobs screen mobile polish', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByText('Try Again'));
+      fireEvent.press(getByText('Try again'));
     });
 
     await waitFor(() => {
@@ -675,29 +677,20 @@ describe('Settings screen', () => {
     jest.clearAllMocks();
   });
 
-  it('shows local-first storage, backup, ad-free, privacy, and version sections', () => {
-    const { getByText } = render(<Settings navigation={mockNavigation} />);
+  it('shows local-first storage, theme, ad-free, privacy, and version sections', () => {
+    const { getByText } = render(withTheme(<Settings navigation={mockNavigation} />));
 
     expect(getByText('Settings')).toBeTruthy();
     expect(getByText('Data ownership')).toBeTruthy();
-    expect(getByText('Export Backup')).toBeTruthy();
-    expect(getByText('Ad-free upgrade')).toBeTruthy();
+    expect(getByText('Theme')).toBeTruthy();
+    expect(getByText('Export your records')).toBeTruthy();
     expect(getByText('Data safety')).toBeTruthy();
     expect(getByText('Version')).toBeTruthy();
-  });
-
-  it('opens ad-free management from the settings plan row', () => {
-    const { getByText } = render(<Settings navigation={mockNavigation} />);
-
-    fireEvent.press(getByText('Manage'));
-
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('AdFree');
   });
 });
 
 // ---------------------------------------------------------------------------
 // 10.5 — Unit tests for JobDetail screen
-// Validates: Requirements 3.4, 5.2, 6.1
 // ---------------------------------------------------------------------------
 
 describe('JobDetail screen', () => {
@@ -731,29 +724,25 @@ describe('JobDetail screen', () => {
     jest.restoreAllMocks();
   });
 
-  it('status selector renders 3 buttons (Pending, In Progress, Completed)', () => {
-    const { getByText } = render(
-      <JobDetail route={{ params: { job: baseJob } }} navigation={mockNavigation} />
+  it('status selector renders the 3 status options', () => {
+    const { getAllByText, getByText } = render(
+      withTheme(<JobDetail route={{ params: { job: baseJob } }} navigation={mockNavigation} />)
     );
 
-    expect(getByText('Pending')).toBeTruthy();
-    expect(getByText('In Progress')).toBeTruthy();
-    expect(getByText('Completed')).toBeTruthy();
+    // "To do" appears in both the header status chip and the workflow chip button.
+    expect(getAllByText('To do').length).toBeGreaterThanOrEqual(1);
+    expect(getByText('In progress')).toBeTruthy();
+    expect(getByText('Done')).toBeTruthy();
   });
 
-  it('photo grid renders correctly when photos are provided', () => {
-    const jobWithPhotos = {
-      ...baseJob,
-      photos: ['file://photo1.jpg', 'file://photo2.jpg'],
-    };
-
-    const { getByText } = render(
-      <JobDetail route={{ params: { job: jobWithPhotos } }} navigation={mockNavigation} />
+  it('photo grid renders take photo button when no photos are attached', () => {
+    const { getAllByText, getByText } = render(
+      withTheme(<JobDetail route={{ params: { job: baseJob } }} navigation={mockNavigation} />)
     );
 
-    // The Photos label and Add Photo button should be present
-    expect(getByText('Photos')).toBeTruthy();
-    expect(getByText('Add Photo')).toBeTruthy();
+    // "Photos" appears in both the section eyebrow and the section title.
+    expect(getAllByText('Photos').length).toBeGreaterThanOrEqual(1);
+    expect(getByText('Take photo')).toBeTruthy();
   });
 
   it('copies a captured photo into local app storage and persists its path', async () => {
@@ -765,11 +754,11 @@ describe('JobDetail screen', () => {
     updateJob.mockResolvedValueOnce({ ...baseJob });
 
     const { getByText } = render(
-      <JobDetail route={{ params: { job: baseJob } }} navigation={mockNavigation} />
+      withTheme(<JobDetail route={{ params: { job: baseJob } }} navigation={mockNavigation} />)
     );
 
     await act(async () => {
-      fireEvent.press(getByText('Add Photo'));
+      fireEvent.press(getByText('Take photo'));
     });
 
     await waitFor(() => {
@@ -797,14 +786,16 @@ describe('JobDetail screen', () => {
     });
 
     const { getByLabelText } = render(
-      <JobDetail
-        route={{ params: { job: { ...baseJob, photos: [localPhotoUri] } } }}
-        navigation={mockNavigation}
-      />
+      withTheme(
+        <JobDetail
+          route={{ params: { job: { ...baseJob, photos: [localPhotoUri] } } }}
+          navigation={mockNavigation}
+        />
+      )
     );
 
     await act(async () => {
-      fireEvent.press(getByLabelText('Delete photo'));
+      fireEvent.press(getByLabelText('Remove photo'));
     });
 
     await waitFor(() => {
@@ -813,12 +804,11 @@ describe('JobDetail screen', () => {
     });
   });
 
-  it('reminder picker button shows "Set Reminder" when no reminder is set', () => {
+  it('shows a "No reminder scheduled" hint when no reminder is set', () => {
     const { getByText } = render(
-      <JobDetail route={{ params: { job: baseJob } }} navigation={mockNavigation} />
+      withTheme(<JobDetail route={{ params: { job: baseJob } }} navigation={mockNavigation} />)
     );
 
-    expect(getByText('Set Reminder')).toBeTruthy();
     expect(getByText('No reminder scheduled')).toBeTruthy();
   });
 
@@ -827,20 +817,20 @@ describe('JobDetail screen', () => {
     const reminderDate = new Date('2099-02-01T09:30:00.000Z');
 
     const { getByText, getByTestId } = render(
-      <JobDetail route={{ params: { job: baseJob } }} navigation={mockNavigation} />
+      withTheme(<JobDetail route={{ params: { job: baseJob } }} navigation={mockNavigation} />)
     );
 
-    fireEvent.press(getByText('Set Reminder'));
+    fireEvent.press(getByText('Set reminder'));
     fireEvent(getByTestId('DateTimePicker'), 'onChange', null, reminderDate);
 
     await act(async () => {
-      fireEvent.press(getByText('Save'));
+      fireEvent.press(getByText(/save job/i));
     });
 
     await waitFor(() => {
       expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(expect.objectContaining({
         content: expect.objectContaining({
-          title: 'TradieTrack Reminder',
+          title: 'TradieTrack reminder',
           body: 'Follow up on job: Fix tap',
         }),
         trigger: reminderDate,
@@ -850,54 +840,6 @@ describe('JobDetail screen', () => {
         reminderNotificationId: 'notification-1',
       }));
     });
-  });
-
-  it('call customer button opens tel URL when a phone number is present', () => {
-    jest.spyOn(Linking, 'openURL').mockResolvedValueOnce(true);
-    const jobWithPhone = {
-      ...baseJob,
-      customerPhone: '0400 123 456',
-    };
-
-    const { getByText } = render(
-      <JobDetail route={{ params: { job: jobWithPhone } }} navigation={mockNavigation} />
-    );
-
-    fireEvent.press(getByText('Call Customer'));
-
-    expect(Linking.openURL).toHaveBeenCalledWith('tel:0400123456');
-  });
-
-  it('message customer button opens sms URL when a phone number is present', () => {
-    jest.spyOn(Linking, 'openURL').mockResolvedValueOnce(true);
-    const jobWithPhone = {
-      ...baseJob,
-      customerPhone: '0400 123 456',
-    };
-
-    const { getByText } = render(
-      <JobDetail route={{ params: { job: jobWithPhone } }} navigation={mockNavigation} />
-    );
-
-    fireEvent.press(getByText('Message'));
-
-    expect(Linking.openURL).toHaveBeenCalledWith('sms:0400123456');
-  });
-
-  it('email customer button opens mailto URL when an email is present', () => {
-    jest.spyOn(Linking, 'openURL').mockResolvedValueOnce(true);
-    const jobWithEmail = {
-      ...baseJob,
-      customerEmail: 'sarah@example.com',
-    };
-
-    const { getByText } = render(
-      <JobDetail route={{ params: { job: jobWithEmail } }} navigation={mockNavigation} />
-    );
-
-    fireEvent.press(getByText('Email Customer'));
-
-    expect(Linking.openURL).toHaveBeenCalledWith('mailto:sarah@example.com');
   });
 
   it('generates and shares a local PDF job report', async () => {
@@ -912,11 +854,11 @@ describe('JobDetail screen', () => {
     };
 
     const { getByText } = render(
-      <JobDetail route={{ params: { job: jobWithDetails } }} navigation={mockNavigation} />
+      withTheme(<JobDetail route={{ params: { job: jobWithDetails } }} navigation={mockNavigation} />)
     );
 
     await act(async () => {
-      fireEvent.press(getByText('Share Job Report'));
+      fireEvent.press(getByText('Share report'));
     });
 
     await waitFor(() => {

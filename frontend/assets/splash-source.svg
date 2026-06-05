@@ -1,14 +1,32 @@
 <svg width="1242" height="2436" viewBox="0 0 1242 2436" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1242" height="2436" fill="#F3F0EA"/>
-  <g transform="translate(331 690)">
-    <rect width="580" height="580" rx="92" fill="#151411"/>
-    <rect x="138" y="116" width="300" height="358" rx="34" fill="#FFFCF6"/>
-    <path d="M196 116H380C401 116 418 133 418 154V202H158V156C158 134 176 116 196 116Z" fill="#E9E4D9"/>
-    <rect x="216" y="146" width="146" height="34" rx="13" fill="#27241F"/>
-    <rect x="190" y="280" width="230" height="36" rx="15" fill="#B97912"/>
-    <path d="M218 366L286 423L410 272" stroke="#2F6C5F" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="440" cy="132" r="16" fill="#2F6C5F"/>
+  <!-- Background: deep warm charcoal to match the app icon. Premium, calm, intentional. -->
+  <rect width="1242" height="2436" fill="#131210"/>
+
+  <!-- Centered T monogram, scaled to feel like a tool mark, not a logo. -->
+  <g transform="translate(421 880)">
+    <rect width="400" height="76" rx="38" fill="#F4EFE4"/>
+    <rect x="162" y="0" width="76" height="400" rx="38" fill="#F4EFE4"/>
+    <circle cx="320" cy="320" r="32" fill="#7DBDA9"/>
   </g>
-  <text x="621" y="1395" text-anchor="middle" fill="#151411" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="800" letter-spacing="0">TradieTrack Lite</text>
-  <text x="621" y="1466" text-anchor="middle" fill="#69655B" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" letter-spacing="0">Local jobs. No login.</text>
+
+  <!-- Wordmark: deliberately tight, neutral sans feel -->
+  <text x="621" y="1470"
+        text-anchor="middle"
+        fill="#F4EFE4"
+        font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="74"
+        font-weight="800"
+        letter-spacing="-1.4">TradieTrack</text>
+
+  <!-- Subtle accent dot under wordmark, echo of app icon -->
+  <circle cx="621" cy="1530" r="4" fill="#7DBDA9"/>
+
+  <!-- Tagline: calm, plain, local-first promise -->
+  <text x="621" y="1590"
+        text-anchor="middle"
+        fill="#8C8474"
+        font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="32"
+        font-weight="500"
+        letter-spacing="0">Local jobs. No login.</text>
 </svg>

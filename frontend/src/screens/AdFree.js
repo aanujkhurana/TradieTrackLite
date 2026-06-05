@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   AD_FREE_PRODUCT_ID,
   ADS_PROVIDER,
@@ -13,13 +7,17 @@ import {
 } from '../monetization/config';
 import { useMonetization } from '../monetization/MonetizationContext';
 import {
+  AppShell,
+  InfoRow,
   LocalStorageNotice,
   PrimaryButton,
   ScreenHeader,
   SecondaryButton,
-  SectionCard,
+  Section,
+  UpgradeCard,
 } from '../components/ui';
-import { colors, radii, spacing, typography } from '../theme';
+import { Icon } from '../components/Icon';
+import { useTheme } from '../theme';
 
 function getPurchaseErrorMessage(err) {
   if (err?.code === 'PURCHASES_NOT_CONFIGURED') {
@@ -38,6 +36,7 @@ function getPurchaseErrorMessage(err) {
 }
 
 export default function AdFree() {
+  const { colors } = useTheme();
   const {
     entitlement,
     isAdFree,
@@ -49,11 +48,11 @@ export default function AdFree() {
   const handlePurchase = async () => {
     try {
       await purchaseAdFree();
-      Alert.alert('Ad-Free Active', 'Ads have been removed from this device.');
+      Alert.alert('Ad-free active', 'Ads have been removed from this device.');
     } catch (err) {
       const message = getPurchaseErrorMessage(err);
       if (message) {
-        Alert.alert('Purchase Unavailable', message);
+        Alert.alert('Purchase unavailable', message);
       }
     }
   };
@@ -61,126 +60,111 @@ export default function AdFree() {
   const handleRestore = async () => {
     try {
       await restorePurchase();
-      Alert.alert('Purchase Restored', 'Ads have been removed from this device.');
+      Alert.alert('Purchase restored', 'Ads have been removed from this device.');
     } catch (err) {
       const message = getPurchaseErrorMessage(err);
       if (message) {
-        Alert.alert('Restore Unavailable', message);
+        Alert.alert('Restore unavailable', message);
       }
     }
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-    >
+    <AppShell scroll testID="ad-free-screen">
       <ScreenHeader
         eyebrow="Ad-free upgrade"
-        title={isAdFree ? 'Ad-Free Active' : 'Remove Ads'}
+        title={isAdFree ? 'You are ad-free' : 'Remove ads once'}
         subtitle={
           isAdFree
             ? 'This device has a validated ad-free entitlement.'
-            : 'TradieTrack Lite stays free with controlled banner ads. One purchase removes them.'
+            : 'One purchase. No subscription. No account.'
         }
       />
 
-      <LocalStorageNotice title="Simple and local">
-        The upgrade only controls ads. It does not add accounts, subscriptions, cloud sync, or required backend storage.
-      </LocalStorageNotice>
+      <LocalStorageNotice
+        title="Simple and local"
+        body="The upgrade only controls ads. It does not add accounts, subscriptions, cloud sync, or required backend storage."
+      />
 
-      <SectionCard
-        eyebrow="One-time"
-        title={isAdFree ? 'Thanks for supporting TradieTrack Lite' : 'Keep the workspace clean'}
+      <UpgradeCard
+        unlocked={isAdFree}
+        onPress={isAdFree ? undefined : handlePurchase}
+        productLabel="Ad-free"
+        priceLabel={isAdFree ? 'Owned on this device' : 'One-time purchase'}
+      />
+
+      <Section
+        eyebrow="What you get"
+        title="The workspace, uncluttered"
         subtitle="Ads stay out of job creation, editing, report sharing, and other critical job-site actions."
       >
-        <View style={styles.metaGrid}>
-          <View style={styles.metaBox}>
-            <Text style={styles.metaLabel}>Ads</Text>
-            <Text style={styles.metaValue}>{ADS_PROVIDER}</Text>
-          </View>
-          <View style={styles.metaBox}>
-            <Text style={styles.metaLabel}>Purchase</Text>
-            <Text style={styles.metaValue}>{PURCHASE_PROVIDER}</Text>
-          </View>
-          <View style={styles.metaBoxWide}>
-            <Text style={styles.metaLabel}>Product</Text>
-            <Text style={styles.metaValue}>{AD_FREE_PRODUCT_ID}</Text>
-          </View>
-          {entitlement.purchasedAt ? (
-            <View style={styles.metaBoxWide}>
-              <Text style={styles.metaLabel}>Unlocked</Text>
-              <Text style={styles.metaValue}>{entitlement.purchasedAt}</Text>
-            </View>
-          ) : null}
-        </View>
+        <InfoRow
+          icon="info"
+          label="Ads placement"
+          value="Off everywhere"
+          tone="success"
+        />
+        <InfoRow
+          icon="sparkle"
+          label="Subscription"
+          value="None"
+        />
+        <InfoRow
+          icon="shield"
+          label="Account required"
+          value="No"
+        />
+        <InfoRow
+          icon="doc"
+          label="Cloud sync"
+          value="Not added"
+        />
+      </Section>
 
-        {!isAdFree ? (
-          <PrimaryButton
-            title={isBusy ? 'Checking Store...' : 'Buy Ad-Free'}
-            onPress={handlePurchase}
-            disabled={isBusy}
-            style={styles.primaryBtn}
+      <Section
+        eyebrow="Details"
+        title="Product information"
+      >
+        <InfoRow icon="info" label="Ads provider" value={ADS_PROVIDER} />
+        <InfoRow icon="sparkle" label="Purchase provider" value={PURCHASE_PROVIDER} />
+        <InfoRow icon="doc" label="Product ID" value={AD_FREE_PRODUCT_ID} />
+        {entitlement.purchasedAt ? (
+          <InfoRow
+            icon="checkCircle"
+            label="Unlocked"
+            value={entitlement.purchasedAt}
+            tone="success"
           />
         ) : null}
+      </Section>
 
+      <View style={styles.actions}>
+        {!isAdFree ? (
+          <PrimaryButton
+            title={isBusy ? 'Checking store…' : 'Buy ad-free'}
+            onPress={handlePurchase}
+            loading={isBusy}
+            disabled={isBusy}
+            fullWidth
+            icon="sparkle"
+          />
+        ) : null}
         <SecondaryButton
-          title="Restore Purchase"
+          title="Restore purchase"
           onPress={handleRestore}
           disabled={isBusy}
-          style={styles.secondaryBtn}
+          fullWidth
+          icon="refresh"
         />
-      </SectionCard>
-    </ScrollView>
+      </View>
+    </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  contentContainer: {
-    padding: spacing.screen,
-    paddingBottom: 42,
-  },
-  metaGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  metaBox: {
-    flexGrow: 1,
-    flexBasis: 130,
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    padding: spacing.md,
-  },
-  metaBoxWide: {
-    flexBasis: '100%',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    padding: spacing.md,
-  },
-  metaLabel: {
-    color: colors.subtle,
-    ...typography.label,
-  },
-  metaValue: {
-    color: colors.text,
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '700',
-    marginTop: spacing.xs,
-  },
-  primaryBtn: {
-    marginTop: spacing.lg,
-  },
-  secondaryBtn: {
-    marginTop: spacing.md,
+  actions: {
+    marginTop: 8,
+    marginBottom: 20,
+    gap: 10,
   },
 });

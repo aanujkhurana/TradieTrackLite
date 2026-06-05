@@ -2,12 +2,15 @@ import * as FileSystem from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { formatLoggedDuration } from '../utils/time';
-import { colors } from '../theme';
+import { lightTheme } from '../theme/themes';
+
+const reportColors = lightTheme.colors;
+const reportStatus = lightTheme.status;
 
 const STATUS_LABELS = {
-  pending: 'Pending',
-  in_progress: 'In Progress',
-  completed: 'Completed',
+  pending: reportStatus.pending.label,
+  in_progress: reportStatus.in_progress.label,
+  completed: reportStatus.completed.label,
 };
 
 function escapeHtml(value) {
@@ -77,6 +80,7 @@ export async function buildJobReportHtml(job) {
   const endDate = job.endDate || null;
   const totalLoggedTime = formatLoggedDuration(startDate, endDate);
   const title = job.name || 'Untitled job';
+  const statusMeta = reportStatus[job.status] || reportStatus.pending;
 
   return `
     <!doctype html>
@@ -84,50 +88,125 @@ export async function buildJobReportHtml(job) {
       <head>
         <meta charset="utf-8" />
         <style>
+          * { box-sizing: border-box; }
           body {
-            color: ${colors.text};
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: ${reportColors.text};
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
             font-size: 13px;
-            line-height: 1.45;
-            margin: 32px;
+            line-height: 1.5;
+            margin: 0;
+            padding: 36px 32px;
+            background: ${reportColors.background};
+          }
+          .container { max-width: 720px; margin: 0 auto; }
+          .header {
+            border: 1px solid ${reportColors.border};
+            background: ${reportColors.surface};
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 20px;
+          }
+          .eyebrow {
+            color: ${reportColors.subtle};
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
           }
           h1 {
-            font-size: 26px;
-            margin: 0 0 6px;
-          }
-          h2 {
-            border-bottom: 1px solid ${colors.border};
-            font-size: 16px;
-            margin: 24px 0 10px;
-            padding-bottom: 6px;
+            font-size: 28px;
+            line-height: 1.15;
+            margin: 0 0 8px;
+            color: ${reportColors.ink};
+            letter-spacing: -0.4px;
+            font-weight: 800;
           }
           .meta {
-            color: ${colors.muted};
-            margin-bottom: 18px;
+            color: ${reportColors.muted};
+            font-size: 12px;
+            margin-bottom: 14px;
+          }
+          .status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: ${statusMeta.bg};
+            color: ${statusMeta.fg};
+            border: 1px solid ${statusMeta.border};
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+          }
+          .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+          }
+          .tile {
+            border: 1px solid ${reportColors.border};
+            background: ${reportColors.surface};
+            border-radius: 14px;
+            padding: 12px 14px;
+          }
+          .tile .label {
+            color: ${reportColors.subtle};
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+          }
+          .tile .value {
+            color: ${reportColors.ink};
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: -0.1px;
+          }
+          .section {
+            border: 1px solid ${reportColors.border};
+            background: ${reportColors.surface};
+            border-radius: 18px;
+            padding: 22px;
+            margin-bottom: 14px;
+          }
+          h2 {
+            font-size: 16px;
+            margin: 0 0 14px;
+            color: ${reportColors.ink};
+            font-weight: 700;
+            letter-spacing: -0.1px;
           }
           table {
             border-collapse: collapse;
             width: 100%;
           }
-          th,
-          td {
-            border-bottom: 1px solid ${colors.border};
-            padding: 8px 6px;
+          th, td {
+            border-bottom: 1px solid ${reportColors.borderSoft};
+            padding: 10px 0;
             text-align: left;
             vertical-align: top;
+            font-size: 13px;
           }
+          tr:last-child th, tr:last-child td { border-bottom: 0; }
           th {
-            color: ${colors.muted};
-            font-weight: 700;
-            width: 155px;
+            color: ${reportColors.muted};
+            font-weight: 600;
+            width: 160px;
+          }
+          td {
+            color: ${reportColors.text};
+            font-weight: 600;
           }
           .notes {
-            background: ${colors.surfaceInset};
-            border: 1px solid ${colors.border};
-            border-radius: 6px;
-            min-height: 48px;
-            padding: 10px;
+            background: ${reportColors.surfaceInset};
+            border: 1px solid ${reportColors.borderSoft};
+            border-radius: 12px;
+            padding: 12px 14px;
             white-space: pre-wrap;
+            color: ${reportColors.text};
           }
           .photos {
             display: flex;
@@ -135,41 +214,81 @@ export async function buildJobReportHtml(job) {
             gap: 10px;
           }
           .photo {
-            border: 1px solid ${colors.border};
-            border-radius: 6px;
-            height: 180px;
+            border: 1px solid ${reportColors.border};
+            border-radius: 12px;
+            height: 160px;
             object-fit: cover;
-            width: 180px;
+            width: 160px;
           }
           .muted {
-            color: ${colors.muted};
+            color: ${reportColors.muted};
+          }
+          .footer {
+            color: ${reportColors.subtle};
+            font-size: 11px;
+            text-align: center;
+            margin-top: 24px;
           }
         </style>
       </head>
       <body>
-        <h1>${escapeHtml(title)}</h1>
-        <div class="meta">TradieTrack Lite job report</div>
+        <div class="container">
+          <div class="header">
+            <div class="eyebrow">Job report</div>
+            <h1>${escapeHtml(title)}</h1>
+            <div class="meta">TradieTrack Lite · generated ${formatDate(new Date().toISOString())}</div>
+            <span class="status">${escapeHtml(STATUS_LABELS[job.status] || job.status)}</span>
+          </div>
 
-        <h2>Job Details</h2>
-        <table>
-          ${detailRow('Customer', job.customerName)}
-          ${detailRow('Phone', job.customerPhone)}
-          ${detailRow('Email', job.customerEmail)}
-          ${detailRow('Address', job.address)}
-          ${detailRow('Status', STATUS_LABELS[job.status] || job.status)}
-          ${detailRow('Start Date', formatDate(startDate))}
-          ${detailRow('End Date', formatDate(endDate))}
-          ${detailRow('Total Logged Time', totalLoggedTime)}
-        </table>
+          <div class="grid">
+            <div class="tile">
+              <div class="label">Customer</div>
+              <div class="value">${escapeHtml(job.customerName || 'Not provided')}</div>
+            </div>
+            <div class="tile">
+              <div class="label">Phone</div>
+              <div class="value">${escapeHtml(job.customerPhone || 'Not provided')}</div>
+            </div>
+            <div class="tile">
+              <div class="label">Start</div>
+              <div class="value">${escapeHtml(formatDate(startDate))}</div>
+            </div>
+            <div class="tile">
+              <div class="label">End</div>
+              <div class="value">${escapeHtml(formatDate(endDate))}</div>
+            </div>
+          </div>
 
-        <h2>Customer Notes</h2>
-        <div class="notes">${escapeHtml(job.customerNotes || 'No customer notes recorded.')}</div>
+          <div class="section">
+            <h2>Job details</h2>
+            <table>
+              ${detailRow('Address', job.address)}
+              ${detailRow('Email', job.customerEmail)}
+              ${detailRow('Total logged', totalLoggedTime)}
+            </table>
+          </div>
 
-        <h2>Job Notes</h2>
-        <div class="notes">${escapeHtml(job.notes || 'No job notes recorded.')}</div>
+          ${job.customerNotes ? `
+            <div class="section">
+              <h2>Customer notes</h2>
+              <div class="notes">${escapeHtml(job.customerNotes)}</div>
+            </div>
+          ` : ''}
 
-        <h2>Photos</h2>
-        ${photos}
+          ${job.notes ? `
+            <div class="section">
+              <h2>Job notes</h2>
+              <div class="notes">${escapeHtml(job.notes)}</div>
+            </div>
+          ` : ''}
+
+          <div class="section">
+            <h2>Photos</h2>
+            ${photos}
+          </div>
+
+          <div class="footer">TradieTrack Lite · On this device · No account required</div>
+        </div>
       </body>
     </html>
   `;

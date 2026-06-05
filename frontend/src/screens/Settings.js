@@ -1,193 +1,209 @@
 import React, { useState } from 'react';
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { exportJobsBackup } from '../data/backups';
 import { listJobs } from '../data/jobs';
 import { useMonetization } from '../monetization/MonetizationContext';
 import { DATA_SAFETY_MESSAGES } from '../privacy/dataSafety';
 import {
+  AppShell,
   InfoRow,
   LocalStorageNotice,
   PrimaryButton,
+  RowAction,
   ScreenHeader,
-  SecondaryButton,
-  SectionCard,
+  Section,
   StatusChip,
+  ThemeToggle,
+  UpgradeCard,
 } from '../components/ui';
-import { colors, radii, spacing, typography } from '../theme';
+import { Icon } from '../components/Icon';
+import { useTheme, THEME_MODES } from '../theme';
 import packageInfo from '../../package.json';
 
 export default function Settings({ navigation }) {
-  const [backupLoading, setBackupLoading] = useState(false);
-  const [backupError, setBackupError] = useState('');
+  const { colors, preference, setMode, resolvedMode } = useTheme();
   const { isAdFree } = useMonetization();
+  const [backupLoading, setBackupLoading] = useState(false);
 
   const handleExportBackup = async () => {
     setBackupLoading(true);
-    setBackupError('');
     try {
       const jobs = await listJobs();
       await exportJobsBackup(jobs);
     } catch (err) {
-      const message = 'Backup could not be created or shared from this device. Your jobs are still saved locally.';
-      setBackupError(message);
-      Alert.alert('Backup Error', message);
+      Alert.alert(
+        'Backup error',
+        'Backup could not be created or shared from this device. Your jobs are still saved locally.'
+      );
     } finally {
       setBackupLoading(false);
     }
   };
 
+  const modeCopy = {
+    system: 'Match system',
+    light: 'Light',
+    dark: 'Dark',
+  };
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-    >
+    <AppShell scroll testID="settings-screen">
       <ScreenHeader
         eyebrow="Local-first settings"
         title="Settings"
-        subtitle="Simple controls for storage, backup, ads, and app safety."
-        right={<StatusChip label={isAdFree ? 'Ad-Free' : 'Free'} color={isAdFree ? colors.accent : colors.amber} />}
+        subtitle="Theme, backup, ads, and app safety."
+        right={
+          <StatusChip
+            status={isAdFree ? 'completed' : 'pending'}
+            label={isAdFree ? 'Ad-free' : 'Free'}
+            size="sm"
+          />
+        }
       />
 
-      <LocalStorageNotice title="Data ownership">
-        {`${DATA_SAFETY_MESSAGES.localStorageNote} ${DATA_SAFETY_MESSAGES.backendNotice}`}
-      </LocalStorageNotice>
+      <LocalStorageNotice
+        title="Data ownership"
+        body="Job records, reminders, and photos are stored on this device. No account or backend is required for normal app use."
+      />
 
-      <SectionCard
+      <Section
+        eyebrow="Appearance"
+        title="Theme"
+        subtitle="Light and dark are tuned independently. System follow is on by default."
+      >
+        <ThemeToggle />
+        <View style={styles.modeRow}>
+          {THEME_MODES.map((mode) => {
+            const active = preference === mode;
+            return (
+              <Pressable
+                key={mode}
+                onPress={() => setMode(mode)}
+                style={({ pressed }) => [
+                  styles.modeChip,
+                  {
+                    backgroundColor: active ? colors.ink : colors.surfaceInset,
+                    borderColor: active ? colors.ink : colors.borderSoft,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <Icon
+                  name={mode === 'system' ? 'sparkle' : mode === 'dark' ? 'moon' : 'sun'}
+                  size={14}
+                  color={active ? colors.onInk : colors.muted}
+                />
+                <Text
+                  style={[
+                    styles.modeChipText,
+                    { color: active ? colors.onInk : colors.muted },
+                  ]}
+                >
+                  {modeCopy[mode]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={[styles.modeHelp, { color: colors.muted }]}>
+          Resolved: {modeCopy[resolvedMode]}
+        </Text>
+      </Section>
+
+      <Section
         eyebrow="Backup"
         title="Export your records"
         subtitle="Create a local JSON backup you can save to Files, Drive, email, or another safe place."
       >
-        <View style={styles.backupPanel}>
-          <Text style={styles.backupTitle}>Keep a copy outside the app</Text>
-          <Text style={styles.backupBody}>
-            {DATA_SAFETY_MESSAGES.backupReminder}
-          </Text>
-        </View>
-        <PrimaryButton
-          title={backupLoading ? 'Exporting Backup...' : 'Export Backup'}
+        <RowAction
+          icon="download"
+          label={backupLoading ? 'Exporting backup…' : 'Export local backup'}
           onPress={handleExportBackup}
-          disabled={backupLoading}
-          style={styles.sectionAction}
         />
-        {backupError ? <Text style={styles.errorText}>{backupError}</Text> : null}
-      </SectionCard>
+        <Text style={[styles.helper, { color: colors.muted }]}>
+          {DATA_SAFETY_MESSAGES.backupReminder}
+        </Text>
+      </Section>
 
-      <SectionCard
-        eyebrow="Ads"
-        title="Ad-free upgrade"
-        subtitle="A one-time purchase removes ads. No subscription, account, or team plan."
-      >
-        <InfoRow
-          label="Current plan"
-          value={isAdFree ? 'Ad-free active on this device' : 'Free with banner ads'}
-          action="Manage"
-          onPress={() => navigation.navigate('AdFree')}
-        />
-        <SecondaryButton
-          title={isAdFree ? 'View Ad-Free Status' : 'Remove Ads Once'}
-          onPress={() => navigation.navigate('AdFree')}
-          style={styles.sectionAction}
-        />
-      </SectionCard>
+      <UpgradeCard
+        unlocked={isAdFree}
+        onPress={() => navigation.navigate('AdFree')}
+        style={styles.upgradeCard}
+      />
 
-      <SectionCard
+      <Section
         eyebrow="Privacy"
         title="Data safety"
-        subtitle="TradieTrack Lite is designed to work without normal backend storage."
+        subtitle="Designed to work without normal backend storage."
       >
-        <View style={styles.infoList}>
-          <Text style={styles.infoItem}>{DATA_SAFETY_MESSAGES.localStorageNote}</Text>
-          <Text style={styles.infoItem}>{DATA_SAFETY_MESSAGES.deleteWarning}</Text>
-          <Text style={styles.infoItem}>{DATA_SAFETY_MESSAGES.analyticsNotice}</Text>
-        </View>
-      </SectionCard>
+        <InfoRow
+          icon="shield"
+          label="Storage"
+          value="On this device"
+          tone="success"
+        />
+        <InfoRow
+          icon="warning"
+          label="App deletion"
+          value="May remove jobs and photos"
+          tone="warning"
+        />
+        <InfoRow
+          icon="info"
+          label="Analytics"
+          value="Disabled"
+        />
+        <InfoRow
+          icon="doc"
+          label="Backend"
+          value="Not used for job workflows"
+        />
+      </Section>
 
-      <SectionCard
-        eyebrow="About"
-        title="TradieTrack Lite"
-        subtitle="A pocket job notebook for local-first work tracking."
-      >
-        <View style={styles.versionRow}>
-          <Text style={styles.versionLabel}>Version</Text>
-          <Text style={styles.versionValue}>{packageInfo.version}</Text>
-        </View>
-      </SectionCard>
-    </ScrollView>
+      <Section eyebrow="About" title="TradieTrack Lite">
+        <InfoRow icon="sparkle" label="Version" value={packageInfo.version} />
+        <InfoRow
+          icon="link"
+          label="Privacy policy"
+          value="Open the app store listing"
+          onPress={() => Linking.openURL('https://tradietrack.app/privacy').catch(() => {})}
+        />
+      </Section>
+    </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  contentContainer: {
-    padding: spacing.screen,
-    paddingBottom: 42,
-  },
-  backupPanel: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    padding: spacing.lg,
-  },
-  backupTitle: {
-    ...typography.sectionTitle,
-    color: colors.ink,
-  },
-  backupBody: {
-    ...typography.body,
-    color: colors.muted,
-    marginTop: spacing.xs,
-  },
-  sectionAction: {
-    marginTop: spacing.md,
-  },
-  errorText: {
-    color: colors.danger,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: spacing.sm,
-    textAlign: 'center',
-  },
-  infoList: {
-    gap: spacing.sm,
-  },
-  infoItem: {
-    ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  versionRow: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderSoft,
-    borderRadius: radii.sm,
-    borderWidth: 1,
+  modeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
   },
-  versionLabel: {
-    ...typography.label,
-    color: colors.subtle,
+  modeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
   },
-  versionValue: {
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: '900',
+  modeChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  modeHelp: {
+    fontSize: 12,
+    marginTop: 10,
+  },
+  helper: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 10,
+  },
+  upgradeCard: {
+    marginTop: 0,
   },
 });

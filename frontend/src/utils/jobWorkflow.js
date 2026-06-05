@@ -1,20 +1,23 @@
-import { colors } from '../theme';
+export const JOB_STATUS_KEYS = ['pending', 'in_progress', 'completed'];
 
-export const STATUS_OPTIONS = [
-  { key: 'pending', label: 'Pending', color: colors.subtle },
-  { key: 'in_progress', label: 'In Progress', color: colors.accent },
-  { key: 'completed', label: 'Completed', color: colors.ink },
-];
+export const STATUS_LABELS = {
+  pending: 'To do',
+  in_progress: 'In progress',
+  completed: 'Done',
+};
+
+export const STATUS_SHORT_LABELS = {
+  pending: 'To do',
+  in_progress: 'Active',
+  completed: 'Done',
+};
 
 export const STATUS_FILTERS = [
   { key: 'all', label: 'All' },
-  ...STATUS_OPTIONS,
+  { key: 'pending', label: 'To do' },
+  { key: 'in_progress', label: 'In progress' },
+  { key: 'completed', label: 'Done' },
 ];
-
-export const STATUS_META = STATUS_OPTIONS.reduce((acc, status) => {
-  acc[status.key] = status;
-  return acc;
-}, {});
 
 function parseDate(value) {
   if (!value) return null;
