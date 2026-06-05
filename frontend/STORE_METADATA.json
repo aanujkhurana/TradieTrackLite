@@ -1,0 +1,50 @@
+{
+  "$comment": "Starter metadata for App Store Connect and Google Play Console. Edit before submission. The values below are placeholders.",
+  "common": {
+    "name": "TradieTrack Lite",
+    "shortName": "TradieTrack",
+    "tagline": "Local jobs. No login.",
+    "primaryCategory": "Productivity",
+    "secondaryCategory": "Business",
+    "contentRating": "4+",
+    "primaryLocale": "en-AU",
+    "supportedLocales": ["en-AU", "en-US", "en-GB", "en-CA", "en-NZ"],
+    "copyright": "© 2026 TradieTrack",
+    "supportUrl": "https://tradietrack.app/support",
+    "marketingUrl": "https://tradietrack.app",
+    "privacyPolicyUrl": "https://tradietrack.app/privacy",
+    "termsOfServiceUrl": "https://tradietrack.app/terms",
+    "refundPolicyUrl": "https://tradietrack.app/refunds"
+  },
+  "ios": {
+    "subtitle": "Local job tracker for tradies",
+    "promotionalText": "Capture jobs, photos, reminders, and share a PDF report from your phone. No account, no cloud, no subscription.",
+    "description": "TradieTrack Lite is a simple, local-first job tracker built for tradies who want a clean, reliable place to keep their work in their pocket.\n\nWHAT YOU CAN DO\n• Create a job with name, address, customer name, phone, and email.\n• Attach photos taken with your camera or picked from your library.\n• Schedule local reminders that fire on time, offline.\n• Log time on a job and see a running total.\n• Share a clean PDF report with your customer, straight from your phone.\n• Export a JSON backup any time. Keep a copy in Files, Drive, or email.\n\nWHY LOCAL-FIRST\n• No account required. No login screen. No password to forget.\n• No cloud sync by default. Your jobs, photos, and customer details live on this device.\n• The free version shows a single, calm banner ad. Buy a one-time Ad-free unlock to remove it.\n• Crash reporting is off by default. We don't share your data with anyone unless you opt in.\n\nDESIGNED FOR THE JOBSITE\n• Large touch targets, high contrast, readable in direct sunlight.\n• Light and dark themes tuned independently. Pick the one that works for the lighting on site.\n• Calm typography, no clutter, no bouncy animations, no notifications you didn't ask for.\n\nBUILT AROUND A PROMISE\nRemoving the app may remove its data — so we built a one-tap backup into Settings. Run it weekly, keep the file somewhere safe, and your records are yours forever.\n\nTradieTrack Lite does not require an internet connection to do its job.",
+    "keywords": [
+      "tradie",
+      "contractor",
+      "jobs",
+      "job tracker",
+      "reminders",
+      "photos",
+      "reports",
+      "local first",
+      "offline"
+    ],
+    "whatsNew": "Premium visual overhaul. Tuned light and dark themes, redesigned app icon and splash, refined components across every screen, and a first-run tour that explains the local-first promise.",
+    "reviewNotes": "TradieTrack Lite is a local-first app and does not require an account or login. To verify the full workflow: (1) tap the + button to create a job, (2) tap the camera button to attach a photo, (3) set a reminder, (4) tap Share report. Use the Settings screen to switch theme and to export a backup. The ad-free version can be unlocked from the Ad-free screen. No backend, no cloud, no network access required for normal use."
+  },
+  "android": {
+    "shortDescription": "Local-first job tracker for tradies. No account, no cloud, no subscription.",
+    "fullDescription": "TradieTrack Lite is a simple, local-first job tracker built for tradies who want a clean, reliable place to keep their work in their pocket.\n\nWHAT YOU CAN DO\n• Create a job with name, address, customer name, phone, and email.\n• Attach photos taken with your camera or picked from your library.\n• Schedule local reminders that fire on time, offline.\n• Log time on a job and see a running total.\n• Share a clean PDF report with your customer, straight from your phone.\n• Export a JSON backup any time.\n\nWHY LOCAL-FIRST\n• No account required. No login screen. No password to forget.\n• No cloud sync by default. Your jobs, photos, and customer details live on this device.\n• The free version shows a single, calm banner ad. Buy a one-time Ad-free unlock to remove it.\n\nBUILT FOR THE JOBSITE\nLarge touch targets, high contrast, light and dark themes tuned independently, calm typography. Designed to be useful without an internet connection.\n\nTradieTrack Lite does not require an internet connection to do its job.",
+    "tags": ["Productivity", "Business", "Job tracker", "Local first"],
+    "category": "PRODUCTIVITY",
+    "dataSafety": {
+      "comment": "Fill in via Play Console. Suggested values below based on actual App behaviour.",
+      "dataCollected": [],
+      "dataShared": [],
+      "dataNotCollectedReason": "Job records, photos, and customer details are stored on the device. The free version serves ads via Google AdMob; AdMob may collect advertising identifiers and impression data subject to user consent on iOS.",
+      "userCanOptOut": true
+    }
+  }
+}

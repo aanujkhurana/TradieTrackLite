@@ -113,6 +113,7 @@ export function ScreenHeader({
 
 export function PrimaryButton({
   title,
+  label,
   onPress,
   disabled = false,
   loading = false,
@@ -123,6 +124,7 @@ export function PrimaryButton({
   fullWidth = false,
   testID,
 }) {
+  const resolvedTitle = title || label;
   const { colors, shadows, motion } = useTheme();
   const palette = (() => {
     if (tone === 'ink') {
@@ -175,7 +177,7 @@ export function PrimaryButton({
           {icon ? (
             <Icon name={icon} size={18} color={palette.fg} style={styles.buttonIconLeft} />
           ) : null}
-          <Text style={[styles.buttonText, { color: palette.fg }]}>{title}</Text>
+          <Text style={[styles.buttonText, { color: palette.fg }]}>{resolvedTitle}</Text>
           {iconRight ? (
             <Icon name={iconRight} size={18} color={palette.fg} style={styles.buttonIconRight} />
           ) : null}
@@ -187,6 +189,7 @@ export function PrimaryButton({
 
 export function SecondaryButton({
   title,
+  label,
   onPress,
   disabled = false,
   loading = false,
@@ -198,6 +201,7 @@ export function SecondaryButton({
   size = 'md',
   testID,
 }) {
+  const resolvedTitle = title || label;
   const { colors, motion } = useTheme();
   const isDanger = tone === 'danger';
   const isAccent = tone === 'accent';
@@ -240,7 +244,7 @@ export function SecondaryButton({
               { color: palette.fg },
             ]}
           >
-            {title}
+            {resolvedTitle}
           </Text>
           {iconRight ? (
             <Icon name={iconRight} size={size === 'sm' ? 15 : 17} color={palette.fg} style={styles.buttonIconRight} />

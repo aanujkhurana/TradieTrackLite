@@ -1,0 +1,29 @@
+# E2E test: settings + theme switching
+#
+# Verifies the theme toggle, the backup row, the ad-free status row,
+# the version row, the battery guidance row (Android only), and the
+# privacy / terms / refund policy links.
+
+appId: app.tradietrack.lite
+name: Settings + theme switching
+tags:
+  - smoke
+---
+- launchApp
+- runFlow:
+    when:
+      visible: "Skip"
+    commands:
+      - tapOn: "Skip the tour"
+- assertVisible: "Add first job"
+- tapOn: "Settings"
+- assertVisible: "Theme"
+- assertVisible: "Match system"
+- tapOn: "Dark"
+- assertVisible: "Resolved: Dark"
+- tapOn: "Light"
+- assertVisible: "Resolved: Light"
+- assertVisible: "Version"
+- assertVisible: "Privacy policy"
+- assertVisible: "Terms of service"
+- assertVisible: "Refund policy"

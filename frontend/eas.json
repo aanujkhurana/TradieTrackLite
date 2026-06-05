@@ -1,0 +1,76 @@
+{
+  "cli": {
+    "version": ">= 7.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "base": {
+      "node": "18.20.4",
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "production"
+      },
+      "android": {
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "ios": {
+        "distribution": "store",
+        "simulator": false,
+        "resourceClass": "m-medium",
+        "autoIncrement": true
+      }
+    },
+    "development": {
+      "extends": "base",
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "development"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "staging"
+      }
+    },
+    "production": {
+      "extends": "base",
+      "channel": "production",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "production"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "${EXPO_PUBLIC_IOS_ASC_APP_ID}"
+      },
+      "android": {
+        "track": "internal",
+        "serviceAccountKeyPath": "./secrets/play-service-account.json"
+      }
+    },
+    "preview": {
+      "ios": {
+        "ascAppId": "${EXPO_PUBLIC_IOS_ASC_APP_ID}"
+      },
+      "android": {
+        "track": "internal",
+        "serviceAccountKeyPath": "./secrets/play-service-account.json"
+      }
+    }
+  },
+  "runtimeVersion": {
+    "policy": "sdkVersion"
+  }
+}

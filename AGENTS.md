@@ -94,6 +94,31 @@ cd backend
 npm test
 ```
 
+## Asset build
+
+```sh
+cd frontend
+npm run build:assets
+```
+
+Regenerates `assets/icon.png`, `assets/adaptive-icon.png`,
+`assets/splash.png`, the full iOS + Android icon size set, and the
+Play Store feature graphic placeholder. Run after any change to
+`assets/icon-source.svg`, `assets/adaptive-icon-source.svg`, or
+`assets/splash-source.svg`.
+
+## E2E tests (Maestro)
+
+```sh
+brew install mobile-dev-inc/tap/maestro
+cd frontend
+maestro test e2e/create-job.yaml
+maestro test e2e/settings-theme.yaml
+```
+
+Maestro tests run against a release or preview build installed on a
+device or simulator.
+
 ## Implementation Notes
 
 - Preserve status enum values: `pending`, `in_progress`, `completed`.
@@ -103,3 +128,59 @@ npm test
 - Keep photos local.
 - Before removing legacy backend/auth code, first ensure the frontend has working local replacements.
 - Commit and push each coherent checkpoint if the user has asked to maintain that workflow.
+
+## Production-readiness scaffolding (v2.1+)
+
+The repo contains scaffolding for first store submission. Each item
+below is a code / config building block; the human owner is
+responsible for the values the stores review.
+
+- `frontend/eas.json` — build + submit profiles (dev / preview /
+  production). Configure EAS secrets before running `eas build`.
+- `frontend/app.config.js` — bundle IDs, scheme, runtime version,
+  iOS Info.plist (NSUserTrackingUsageDescription for AdMob,
+  camera + photo library descriptions, ITSAppUsesNonExemptEncryption),
+  Android permissions (CAMERA, READ_MEDIA_IMAGES, POST_NOTIFICATIONS,
+  SCHEDULE_EXACT_ALARM, FOREGROUND_SERVICE).
+- `frontend/STORE_METADATA.json` — description, keywords, category,
+  data-safety draft. Read this file, then paste the values into App
+  Store Connect / Play Console.
+- `frontend/POLICY_PRIVACY.md`, `frontend/POLICY_TERMS.md`,
+  `frontend/POLICY_REFUND.md` — legal copy placeholders. Must be
+  reviewed and hosted at real public URLs before submission.
+- `frontend/src/onboarding/Onboarding.js` — first-run tour that
+  explains the local-first promise. Gated on
+  `loadOnboardingState().hasSeenOnboarding`; reset from Settings.
+- `frontend/src/components/ErrorBoundary.js` — global error
+  boundary that shows an on-brand fallback screen. Wrap the app
+  root with this before mounting the navigator.
+- `frontend/src/observability/sentry.js` — opt-in crash reporting
+  wired but disabled by default. Set `EXPO_PUBLIC_SENTRY_DSN` in
+  EAS production profile to enable. Local-first promise preserved:
+  no PII, no job records, no customer details in events.
+- `frontend/src/privacy/battery.js` — Android reminder reliability
+  helper. Settings surfaces a "Open Android settings" row so the
+  user can mark the app as Unrestricted.
+- `frontend/e2e/*.yaml` — Maestro E2E tests for the critical path
+  and settings.
+
+## Production-readiness gaps before public release
+
+These are release gates, not dev-time concerns. They do not block
+further feature work.
+
+1. Real bundle ID + package in `app.config.js` (or
+   `EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER` / `EXPO_PUBLIC_ANDROID_PACKAGE`
+   EAS secrets).
+2. Real AdMob + RevenueCat keys (see env list in
+   `frontend/README.md` / repo root `README.md`).
+3. Real Ad-free IAP product created in App Store Connect and Play
+   Console.
+4. Privacy / Terms / Refund policy hosted at real URLs; in-app
+   `Linking.openURL` calls updated to point at them.
+5. Play Store feature graphic (1024x500) — designer-owned asset.
+6. Store screenshots for the required device classes.
+7. Store metadata pasted into App Store Connect and Play Console.
+8. TestFlight internal + Play internal track soak ≥ 1 week.
+9. Real device QA on iOS 16/17/18 and Android 12/13/14/15.
+10. Legal review of all three policy documents.

@@ -18,6 +18,12 @@ import {
 } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { useTheme, THEME_MODES } from '../theme';
+import {
+  getBatteryOptimisationMessage,
+  isAndroid,
+  openAppSettings,
+} from '../privacy/battery';
+import { resetOnboardingState } from '../onboarding/storage';
 import packageInfo from '../../package.json';
 
 export default function Settings({ navigation }) {
@@ -167,6 +173,50 @@ export default function Settings({ navigation }) {
           label="Privacy policy"
           value="Open the app store listing"
           onPress={() => Linking.openURL('https://tradietrack.app/privacy').catch(() => {})}
+        />
+        <InfoRow
+          icon="link"
+          label="Terms of service"
+          value="Open the app store listing"
+          onPress={() => Linking.openURL('https://tradietrack.app/terms').catch(() => {})}
+        />
+        <InfoRow
+          icon="link"
+          label="Refund policy"
+          value="How refunds work"
+          onPress={() => Linking.openURL('https://tradietrack.app/refunds').catch(() => {})}
+        />
+      </Section>
+
+      {isAndroid() ? (
+        <Section
+          eyebrow="Reminders"
+          title="Keep notifications on time"
+          subtitle={getBatteryOptimisationMessage().body}
+        >
+          <RowAction
+            icon="bell"
+            label={getBatteryOptimisationMessage().cta}
+            onPress={openAppSettings}
+          />
+        </Section>
+      ) : null}
+
+      <Section
+        eyebrow="Help"
+        title="Take the tour again"
+        subtitle="Replay the first-run introduction."
+      >
+        <RowAction
+          icon="refresh"
+          label="Replay onboarding"
+          onPress={async () => {
+            await resetOnboardingState();
+            Alert.alert(
+              'Tour reset',
+              'The onboarding tour will appear on the next launch.'
+            );
+          }}
         />
       </Section>
     </AppShell>

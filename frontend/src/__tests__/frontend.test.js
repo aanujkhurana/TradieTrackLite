@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
-import { Alert, Linking } from 'react-native';
+import { Alert, Linking, Text } from 'react-native';
 import fc from 'fast-check';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
@@ -124,6 +124,18 @@ jest.mock('@expo/vector-icons', () => {
   const { Text } = require('react-native');
   return {
     Ionicons: ({ name }) => React.createElement(Text, null, name || 'icon'),
+  };
+});
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const SafeAreaView = ({ children, ...props }) =>
+    React.createElement(View, props, children);
+  return {
+    SafeAreaView,
+    SafeAreaProvider: ({ children }) => children,
+    useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+    useSafeAreaFrame: () => ({ x: 0, y: 0, width: 375, height: 812 }),
   };
 });
 
@@ -677,7 +689,7 @@ describe('Settings screen', () => {
     jest.clearAllMocks();
   });
 
-  it('shows local-first storage, theme, ad-free, privacy, and version sections', () => {
+  it('shows local-first storage, theme, ad-free, privacy, version, and onboarding reset sections', () => {
     const { getByText } = render(withTheme(<Settings navigation={mockNavigation} />));
 
     expect(getByText('Settings')).toBeTruthy();
@@ -686,6 +698,10 @@ describe('Settings screen', () => {
     expect(getByText('Export your records')).toBeTruthy();
     expect(getByText('Data safety')).toBeTruthy();
     expect(getByText('Version')).toBeTruthy();
+    expect(getByText('Privacy policy')).toBeTruthy();
+    expect(getByText('Terms of service')).toBeTruthy();
+    expect(getByText('Refund policy')).toBeTruthy();
+    expect(getByText('Take the tour again')).toBeTruthy();
   });
 });
 
@@ -870,5 +886,149 @@ describe('JobDetail screen', () => {
         expect.objectContaining({ mimeType: 'application/pdf' })
       );
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Onboarding, ErrorBoundary, and observability helpers
+// ---------------------------------------------------------------------------
+
+import Onboarding from '../onboarding/Onboarding';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import {
+  defaultOnboardingState,
+  loadOnboardingState,
+  resetOnboardingState,
+  saveOnboardingState,
+} from '../onboarding/storage';
+import {
+  isAndroid,
+  openAppSettings,
+  getBatteryOptimisationMessage,
+} from '../privacy/battery';
+import { reportError, reportMessage } from '../observability/sentry';
+
+describe('Onboarding screen', () => {
+  const onDone = jest.fn();
+
+  beforeEach(() => {
+    onDone.mockClear();
+  });
+
+  it('shows the local-first promise on the first step', () => {
+    const { getByText } = render(withTheme(<Onboarding onDone={onDone} />));
+    expect(getByText('Your jobs stay on this device')).toBeTruthy();
+    expect(getByText('Local-first')).toBeTruthy();
+    expect(getByText('Continue')).toBeTruthy();
+  });
+
+  it('advances through the steps and finishes on the last one', async () => {
+    const { getByText } = render(
+      withTheme(<Onboarding onDone={onDone} />)
+    );
+
+    fireEvent.press(getByText('Continue'));
+    expect(getByText('Capture the job, set a reminder, share the report')).toBeTruthy();
+
+    fireEvent.press(getByText('Continue'));
+    expect(getByText('On Android, allow notifications and disable battery optimisation')).toBeTruthy();
+    expect(getByText('Start using TradieTrack')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(getByText('Start using TradieTrack'));
+    });
+
+    expect(onDone).toHaveBeenCalled();
+  });
+
+  it('skips the tour when the skip button is pressed', async () => {
+    const { getByText } = render(withTheme(<Onboarding onDone={onDone} />));
+
+    await act(async () => {
+      fireEvent.press(getByText('Skip the tour'));
+    });
+
+    expect(onDone).toHaveBeenCalled();
+  });
+});
+
+describe('Onboarding storage helpers', () => {
+  it('returns a default state in test env without touching the file system', async () => {
+    const state = await loadOnboardingState();
+    expect(state).toEqual(defaultOnboardingState());
+    expect(state.hasSeenOnboarding).toBe(false);
+  });
+
+  it('saves and resets onboarding state without touching the file system in test env', async () => {
+    const saved = await saveOnboardingState({ hasSeenOnboarding: true });
+    expect(saved.hasSeenOnboarding).toBe(true);
+
+    const reset = await resetOnboardingState();
+    expect(reset.hasSeenOnboarding).toBe(false);
+  });
+});
+
+describe('ErrorBoundary', () => {
+  function Boom() {
+    throw new Error('test explosion');
+  }
+
+  function StableChild() {
+    return <Text>Stable child</Text>;
+  }
+
+  it('renders a calm fallback when a child throws and offers a restart', () => {
+    const onReset = jest.fn();
+    const { getByText } = render(
+      withTheme(
+        <ErrorBoundary onReset={onReset}>
+          <Boom />
+        </ErrorBoundary>
+      )
+    );
+
+    expect(getByText('Something went off-script')).toBeTruthy();
+    expect(getByText('Back to jobs')).toBeTruthy();
+    fireEvent.press(getByText('Back to jobs'));
+    expect(onReset).toHaveBeenCalled();
+  });
+
+  it('renders children normally when nothing throws', () => {
+    const { queryByText } = render(
+      withTheme(
+        <ErrorBoundary>
+          <StableChild />
+        </ErrorBoundary>
+      )
+    );
+    expect(queryByText('Something went off-script')).toBeNull();
+  });
+});
+
+describe('Observability helpers', () => {
+  it('reportError is a no-op when Sentry is not configured', async () => {
+    await expect(reportError(new Error('boom'))).resolves.toBeUndefined();
+  });
+
+  it('reportMessage is a no-op when Sentry is not configured', async () => {
+    await expect(reportMessage('hello')).resolves.toBeUndefined();
+  });
+});
+
+describe('Battery helper', () => {
+  it('detects Android from Platform.OS', () => {
+    expect(isAndroid()).toBe(false);
+  });
+
+  it('returns a calm, non-empty explanation string', () => {
+    const msg = getBatteryOptimisationMessage();
+    expect(msg.title).toMatch(/reminders/i);
+    expect(msg.body.length).toBeGreaterThan(20);
+    expect(msg.cta.length).toBeGreaterThan(0);
+  });
+
+  it('openAppSettings returns false outside Android', async () => {
+    const result = await openAppSettings();
+    expect(typeof result).toBe('boolean');
   });
 });

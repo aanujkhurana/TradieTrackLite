@@ -1,0 +1,46 @@
+# E2E test: create a job and verify it appears in the list
+#
+# Runs against a release or preview build installed on a device or
+# simulator. Requires Maestro: https://maestro.mobile.dev
+#
+# Install:
+#   brew install mobile-dev-inc/tap/maestro
+#   cd frontend && npx expo run:ios
+#   npx expo run:android
+#
+# Run:
+#   maestro test e2e/create-job.yaml
+#
+# What this verifies end-to-end:
+#   - First-run onboarding can be skipped.
+#   - Empty state shows the Add first job CTA.
+#   - The create form accepts a job name and address.
+#   - The new job appears in the list.
+#
+# Onboarding is included because the App gates the rest of the UI on
+# it. Replace "Skip the tour" with "Continue" three times if you want
+# to step through the cards instead of skipping.
+
+appId: app.tradietrack.lite
+name: Create a job end-to-end
+tags:
+  - smoke
+  - critical-path
+---
+- launchApp
+- runFlow:
+    when:
+      visible: "Skip"
+    commands:
+      - tapOn: "Skip the tour"
+- assertVisible: "Add first job"
+- tapOn: "Add first job"
+- assertVisible: "Job name"
+- tapOn: "Job name"
+- inputText: "Test job from Maestro"
+- assertVisible: "Site address"
+- tapOn: "Site address"
+- inputText: "1 Test Street"
+- assertVisible: "Save job"
+- tapOn: "Save job"
+- assertVisible: "Test job from Maestro"

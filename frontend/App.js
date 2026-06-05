@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { LogBox, StatusBar, View } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -10,6 +10,9 @@ import AdFree from './src/screens/AdFree';
 import Settings from './src/screens/Settings';
 import { MonetizationProvider } from './src/monetization/MonetizationContext';
 import { ThemeProvider, useTheme } from './src/theme';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
+import Onboarding from './src/onboarding/Onboarding';
+import { loadOnboardingState } from './src/onboarding/storage';
 
 LogBox.ignoreLogs([
   'Constants.platform.ios.model has been deprecated',
@@ -107,6 +110,24 @@ function AppNavigator() {
 
 function ThemedRoot() {
   const { colors, resolvedMode } = useTheme();
+  const [onboardingState, setOnboardingState] = useState({
+    hasSeenOnboarding: undefined,
+  });
+
+  useEffect(() => {
+    let active = true;
+    loadOnboardingState().then((state) => {
+      if (active) setOnboardingState(state);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleOnboardingDone = () => {
+    setOnboardingState({ hasSeenOnboarding: true });
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar
@@ -114,7 +135,11 @@ function ThemedRoot() {
         backgroundColor={colors.background}
       />
       <MonetizationProvider>
-        <AppNavigator />
+        {onboardingState.hasSeenOnboarding === false ? (
+          <Onboarding onDone={handleOnboardingDone} />
+        ) : (
+          <AppNavigator />
+        )}
       </MonetizationProvider>
     </View>
   );
@@ -124,7 +149,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <ThemedRoot />
+        <ErrorBoundary>
+          <ThemedRoot />
+        </ErrorBoundary>
       </ThemeProvider>
     </SafeAreaProvider>
   );
