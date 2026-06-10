@@ -6,14 +6,14 @@ This test plan documents the release-readiness checks for the local-first MVP. M
 
 - [x] Run frontend unit tests with `cd frontend && npm test -- --runInBand --watchman=false`.
 - [x] Run Expo config validation with `cd frontend && npx expo config --type public`.
-- [ ] Run Expo diagnostics with `cd frontend && npx expo-doctor` if network/tooling is available.
+- [x] Run Expo diagnostics with `cd frontend && npx expo-doctor` if network/tooling is available.
 
-Last checked on June 3, 2026:
+Last checked on June 10, 2026:
 
 - Frontend tests passed: 2 suites, 44 tests.
-- Expo public config loaded successfully for SDK 48.
-- `expo-doctor` ran and reported 15/16 checks passing.
-- Open blocker: Expo SDK 48 targets Android API level 33 or lower by default; Google Play submissions after August 31, 2024 require target API level 34 or higher. Upgrade to Expo SDK 50 or later before Android store submission.
+- Expo public config loaded successfully for SDK 56.
+- `expo-doctor` ran and reported 21/21 checks passing.
+- Android target API blocker resolved: Expo SDK 56 targets Android API level 36 by default, which satisfies the current Google Play Android 15 / API 35+ submission requirement for phone apps.
 
 ## Fresh Install
 
@@ -51,7 +51,7 @@ Last checked on June 3, 2026:
 
 ## Android Release Build Readiness
 
-Current status: not run in this environment. The repo does not currently include a native `android/` project, native `ios/` project, or `eas.json`, and no production signing credentials or store product credentials are present.
+Current status: not run in this environment. Expo SDK 56 resolves the target API readiness blocker, but the repo does not currently include a native `android/` project, native `ios/` project, or `eas.json`, and no production signing credentials or store product credentials are present.
 
 - [ ] Configure production AdMob Android app ID and banner ad unit ID.
 - [ ] Configure RevenueCat Android API key and the one-time store product.

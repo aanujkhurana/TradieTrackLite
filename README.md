@@ -42,7 +42,7 @@ Treat backend/auth/cloud storage code as legacy unless a task explicitly says ot
 ### Mobile App
 
 - React Native
-- Expo
+- Expo SDK 56
 - React Navigation
 - Local database, preferably SQLite
 - App/device file storage for photos

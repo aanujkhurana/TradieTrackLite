@@ -99,11 +99,19 @@ jest.mock('@react-native-community/datetimepicker', () => {
   const { View } = require('react-native');
   return (props) => React.createElement(View, { testID: 'DateTimePicker', ...props });
 });
-jest.mock('react-native/Libraries/Utilities/Dimensions', () => ({
-  get: () => ({ width: 375, height: 812 }),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-}));
+jest.mock('react-native/Libraries/Utilities/Dimensions', () => {
+  const Dimensions = {
+    get: jest.fn(() => ({ width: 375, height: 812, scale: 2, fontScale: 1 })),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  };
+
+  return {
+    __esModule: true,
+    default: Dimensions,
+    ...Dimensions,
+  };
+});
 
 import { createJob, listJobs, updateJob } from '../data/jobs';
 import { appendPhotoUri, removePhotoUriAtIndex } from '../data/photos';
